@@ -278,7 +278,8 @@ const DocViewPage = () => {
             ref={documentDataTableRef}
             title="P&ID Analysis Results"
             subtitle="Complete analysis from uploaded document"
-            useHtmlData={false} // Use default mock data instead of HTML
+            useHtmlData={true} // Change this to true
+            useMockData={true} // Add this to ensure mock data is used
           />
         </div>
       </div>

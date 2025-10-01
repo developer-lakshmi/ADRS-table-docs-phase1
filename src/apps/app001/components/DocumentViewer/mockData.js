@@ -1,12 +1,9 @@
 // Mock data for development - replace with actual API calls later
 
-export const mockHtmlApiResponse = `<!doctype html>
-<html>
-<head>
-<title>Analysis Result</title>
-</head>
-<body>
-    <table border="1" cellpadding="4" cellspacing="0">
+export const mockApiResponse = {
+  "success": true,
+  "data": {
+    "result": `<table border="1" cellpadding="4" cellspacing="0">
   <thead>
     <tr>
       <th>p&id number</th>
@@ -136,11 +133,12 @@ export const mockHtmlApiResponse = `<!doctype html>
       <td>Apply a new serial for the combined section to flare per line numbering practice and update in the line list.</td>
     </tr>
   </tbody>
-</table>
-    <br>
-<a href="/">Back</a>
-</body>
-</html>`;
+</table>`
+  }
+};
+
+// Legacy HTML response for backward compatibility
+export const mockHtmlApiResponse = mockApiResponse.data.result;
 
 // Sample structured data for testing purposes
 export const mockTableData = [
@@ -191,8 +189,9 @@ export const mockTableData = [
   },
 ];
 
-// Default configuration for data source
+// Simplified configuration - only what you need
 export const DATA_SOURCE_CONFIG = {
-  USE_HTML_DATA: true, // Set to false to use structured mock data
-  USE_MOCK_DATA: true, // Set to false when real API is available
+  USE_REAL_API: false,    // true = call external API, false = use mock
+  USE_HTML_DATA: true,    // true = HTML table format, false = structured data
+  API_ENDPOINT: '/api/analyze-document'
 };

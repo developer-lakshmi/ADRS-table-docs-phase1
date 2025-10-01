@@ -31,12 +31,12 @@ const parseHtmlTableData = (htmlString) => {
 };
 
 const DocumentDataTable = forwardRef(({ 
-  data = [], // Empty array by default to use parsed data
+  data = [],
   title = "P&ID Analysis Results",
   subtitle = "Issues and actions identified from document analysis",
-  useHtmlData = DATA_SOURCE_CONFIG.USE_HTML_DATA, // Use config default
-  htmlData = null, // Accept HTML data as prop
-  useMockData = DATA_SOURCE_CONFIG.USE_MOCK_DATA // New prop for mock data control
+  useHtmlData = DATA_SOURCE_CONFIG.USE_HTML_DATA,
+  htmlData = null,
+  useMockData = true // Default to true instead of config
 }, ref) => {
   
   // Determine data source based on configuration
@@ -46,11 +46,6 @@ const DocumentDataTable = forwardRef(({
       return data;
     }
     
-    // If not using mock data, return empty array (for real API integration)
-    if (!useMockData) {
-      return [];
-    }
-    
     // Use mock data based on configuration
     if (useHtmlData) {
       const htmlToUse = htmlData || mockHtmlApiResponse;
@@ -58,7 +53,7 @@ const DocumentDataTable = forwardRef(({
     } else {
       return mockTableData;
     }
-  }, [data, useHtmlData, htmlData, useMockData]);
+  }, [data, useHtmlData, htmlData]); // Remove useMockData dependency
 
   const [tableData, setTableData] = useState(getDataSource);
   const [editingRemark, setEditingRemark] = useState(null);

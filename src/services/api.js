@@ -1,6 +1,7 @@
 import axios from "axios";
 
 const API_BASE_URL = "http://localhost:3001"; // JSON Server URL
+const EXTERNAL_API_BASE_URL = "https://api.example.com"; // External API URL for analysis
 
 export const getSignupUsers = async () => {
   const response = await axios.get(`${API_BASE_URL}/signup`);
@@ -172,5 +173,47 @@ export const overwriteUploadedFiles = async (files) => {
   } catch (error) {
     console.error("Error overwriting files:", error);
     throw error;
+  }
+};
+
+/**
+ * Analyze document and get P&ID analysis results from external API
+ * @param {string} fileId - The ID of the file to analyze
+ * @param {string} projectId - The project ID
+ * @returns {Promise<Object>} The analysis results
+ */
+export const analyzeDocument = async (fileId, projectId) => {
+  try {
+    console.log(`Sending document analysis request for fileId: ${fileId}, projectId: ${projectId}`);
+    
+    const response = await axios.post(`${EXTERNAL_API_BASE_URL}/api/analyze-document`, {
+      fileId,
+      projectId
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        // Add any required headers like authorization
+        // 'Authorization': `Bearer ${token}`,
+        // 'X-API-Key': 'your-api-key'
+      },
+      timeout: 60000 // 60 seconds timeout for analysis
+    });
+    
+    console.log("Document analysis completed successfully:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Document analysis failed:', error.response?.data || error.message);
+    
+    // Enhanced error handling
+    if (error.response) {
+      // Server responded with error status
+      throw new Error(`Analysis API Error: ${error.response.status} - ${error.response.data?.message || error.response.statusText}`);
+    } else if (error.request) {
+      // Request was made but no response received
+      throw new Error('Analysis API Error: No response from server. Please check your connection.');
+    } else {
+      // Something else happened
+      throw new Error(`Analysis API Error: ${error.message}`);
+    }
   }
 };
