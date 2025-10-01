@@ -504,7 +504,7 @@ const DocumentDataTable = forwardRef(({
     { 
       field: 'issueFound', 
       headerName: 'Issue Found', 
-      width: 400, // Increased width for longer content
+      width: 400,
       headerAlign: 'center',
       align: 'left',
       renderCell: (params) => (
@@ -514,7 +514,7 @@ const DocumentDataTable = forwardRef(({
             wordWrap: 'break-word',
             lineHeight: '1.3',
             padding: '8px 0',
-            maxHeight: '150px', // Increased height
+            maxHeight: '150px',
             overflow: 'auto'
           }}
           title={params.value}
@@ -526,7 +526,7 @@ const DocumentDataTable = forwardRef(({
     { 
       field: 'actionRequired', 
       headerName: 'Action Required', 
-      width: 400, // Increased width for longer content
+      width: 400,
       headerAlign: 'center',
       align: 'left',
       renderCell: (params) => (
@@ -536,7 +536,7 @@ const DocumentDataTable = forwardRef(({
             wordWrap: 'break-word',
             lineHeight: '1.3',
             padding: '8px 0',
-            maxHeight: '150px', // Increased height
+            maxHeight: '150px',
             overflow: 'auto'
           }}
           title={params.value}
@@ -548,7 +548,7 @@ const DocumentDataTable = forwardRef(({
     { 
       field: 'approval', 
       headerName: 'Approval', 
-      width: 200, // Increased width for new button labels
+      width: 180, // Slightly reduced width for shorter button labels
       headerAlign: 'center',
       align: 'center',
       renderCell: (params) => (
@@ -560,10 +560,10 @@ const DocumentDataTable = forwardRef(({
                 ? 'bg-green-500 text-white' 
                 : 'bg-green-100 text-green-700 hover:bg-green-200'
             }`}
-            title="Approve"
+            title="Approve this item"
           >
             <Check size={12} className="mr-1" />
-            Approved
+            Approve
           </button>
           <button
             onClick={() => handleApprovalChange(params.row.id, 'Ignored')}
@@ -572,10 +572,10 @@ const DocumentDataTable = forwardRef(({
                 ? 'bg-red-500 text-white' 
                 : 'bg-red-100 text-red-700 hover:bg-red-200'
             }`}
-            title="Ignore"
+            title="Ignore this item"
           >
             <X size={12} className="mr-1" />
-            Ignored
+            Ignore
           </button>
         </div>
       )
@@ -583,7 +583,7 @@ const DocumentDataTable = forwardRef(({
     { 
       field: 'remark', 
       headerName: 'Remark', 
-      width: 350, // Increased width for longer remarks
+      width: 350,
       headerAlign: 'center',
       align: 'left',
       renderCell: (params) => {
@@ -607,7 +607,7 @@ const DocumentDataTable = forwardRef(({
                   placeholder="Enter remark (max 500 characters)..."
                   autoFocus
                   rows={3}
-                  maxLength={500} // Increased character limit
+                  maxLength={500}
                   onKeyPress={(e) => {
                     if (e.key === 'Enter' && e.ctrlKey) handleRemarkSave(params.row.id);
                     if (e.key === 'Escape') handleRemarkCancel();
