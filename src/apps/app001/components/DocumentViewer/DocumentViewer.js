@@ -183,16 +183,16 @@ const DocViewPage = () => {
             <div className="flex items-center space-x-1 sm:space-x-2">
               <button className="flex items-center mr-1 sm:mr-2" onClick={handleBackToTable}>
                 <ArrowLeft size={20} className="sm:mr-2" />
-                <h2 className="text-lg sm:text-xl hidden sm:block">Document Viewer</h2>
+                <h2 className="text-lg sm:text-xl hidden sm:block">EDRS findings</h2>
                 <h2 className="text-sm block sm:hidden">Doc Viewer</h2>
               </button>
-              {file && (
+              {/* {file && (
                 <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 ml-4">
                   <FileText size={16} className="mr-1" />
                   <span className="hidden sm:inline">{file.name}</span>
                   <span className="sm:hidden">{file.name.substring(0, 20)}...</span>
                 </div>
-              )}
+              )} */}
             </div>
           }
           rightContent={
