@@ -10,8 +10,9 @@ const AppLayout = ({ isScroll, children }) => {
 const { isSubSidebarOpen, isSidebarOpen } = useSelector((state) => state.sidebar);
   const isMobileSidebarOpen = useSelector((state) => state.sidebar.isMobileSidebarOpen);
 
-  const sidebarWidth = isSidebarOpen ? 150 : 32;
-  const subSidebarWidth = isSubSidebarOpen ? 150 : 0;
+  // Hide sidebar for now
+  const sidebarWidth = 0; // isSidebarOpen ? 150 : 32;
+  const subSidebarWidth = 0; // isSubSidebarOpen ? 150 : 0;
   const marginLeft = sidebarWidth + subSidebarWidth;
 
   return (
@@ -19,15 +20,15 @@ const { isSubSidebarOpen, isSidebarOpen } = useSelector((state) => state.sidebar
       {/* Navbar */}
       <Navbar isScroll={isScroll} hasBorder={true} />
 
-      {/* Sidebar */}
-      <div
+      {/* Sidebar - Hidden for now */}
+      {/* <div
         className={`hidden lg:block fixed top-[56px] left-0 h-full bg-white dark:bg-darkTheme transition-all duration-300 border-r border-[rgb(230,231,232)] dark:border-gray-700`}
       >
         <Sidebar />
-      </div>
+      </div> */}
 
-      {/* SubSidebar */}
-      {isSubSidebarOpen && (
+      {/* SubSidebar - Hidden for now */}
+      {/* {isSubSidebarOpen && (
         <div
           className="hidden lg:block fixed top-[56px] h-full bg-gray-100 dark:bg-darkTheme shadow-md transition-all duration-300"
           style={{
@@ -37,19 +38,21 @@ const { isSubSidebarOpen, isSidebarOpen } = useSelector((state) => state.sidebar
         >
           <SubSidebar />
         </div>
-      )}
-       {isMobileSidebarOpen && (
-  <>
-    <MobileSidebar />
-    {isSubSidebarOpen && <MobileSubSidebar />}
-  </>
-)}
+      )} */}
+
+      {/* Mobile Sidebar - Hidden for now */}
+      {/* {isMobileSidebarOpen && (
+        <>
+          <MobileSidebar />
+          {isSubSidebarOpen && <MobileSubSidebar />}
+        </>
+      )} */}
 
         {/* Desktop View */}
       <main
         className="flex-1 overflow-y-auto p-0 transition-all duration-300 hidden lg:block"
         style={{
-          marginLeft: `${marginLeft}px`, // Dynamically calculated margin
+          marginLeft: `${marginLeft}px`, // Now 0px
           height: "calc(100vh - 56px)", // Adjust height to exclude Navbar
         }}
       >

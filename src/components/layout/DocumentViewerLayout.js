@@ -12,34 +12,33 @@ const DocumentViewerLayout = ({ isScroll, children }) => {
   const isSubSidebarOpen = useSelector((state) => state.docSidebar.isSubSidebarOpen);
   const isMobileSidebarOpen = useSelector((state) => state.docSidebar.isMobileSidebarOpen);
 
-  const sidebarWidth = isSidebarOpen ? 32 : 0;
-  const subSidebarWidth = isSubSidebarOpen ? 150 : 0;
+  // Hide sidebar for now
+  const sidebarWidth = 0; // isSidebarOpen ? 32 : 0;
+  const subSidebarWidth = 0; // isSubSidebarOpen ? 150 : 0;
   const marginLeft = sidebarWidth + subSidebarWidth;
 
- // --- Add this for mobile paddingTop ---
+ // Mobile sidebar handling - commented out for now
   let mobilePaddingTop = 56; // Topbar height
-  if (isMobileSidebarOpen && isSubSidebarOpen) {
-    mobilePaddingTop += 48 + 64; // Topbar + MobileSidebar + MobileSubSidebar
-  } else if (isMobileSidebarOpen) {
-    mobilePaddingTop += 48; // Topbar + MobileSidebar
-  }
-  // --------------------------------------
+  // if (isMobileSidebarOpen && isSubSidebarOpen) {
+  //   mobilePaddingTop += 48 + 64; // Topbar + MobileSidebar + MobileSubSidebar
+  // } else if (isMobileSidebarOpen) {
+  //   mobilePaddingTop += 48; // Topbar + MobileSidebar
+  // }
 
   return (
     <div className="flex flex-1 relative h-full bg-[#fff] dark:bg-darkTheme transition-all duration-300">
       {/* Navbar */}
       <Navbar isScroll={isScroll} hasBorder={true} />
 
-      {/* Desktop Sidebar */}
-      <div
+      {/* Desktop Sidebar - Hidden for now */}
+      {/* <div
         className={`hidden lg:block fixed top-[56px] left-0 h-full bg-white dark:bg-darkTheme transition-all duration-300 border-r border-[rgb(230,231,232)] dark:border-gray-700 z-20`}
       >
-                  {/* Doc Sidebar */}
         <DocSidebar />
-      </div>
+      </div> */}
 
-      {/* Desktop SubSidebar */}
-      {isSubSidebarOpen && (
+      {/* Desktop SubSidebar - Hidden for now */}
+      {/* {isSubSidebarOpen && (
         <div
           className="hidden lg:block fixed top-[56px] h-full bg-gray-100 dark:bg-darkTheme shadow-md transition-all duration-300 z-20"
           style={{
@@ -49,22 +48,22 @@ const DocumentViewerLayout = ({ isScroll, children }) => {
         >
           <DocSubSidebar />
         </div>
-      )}
+      )} */}
 
-      {/* Mobile Sidebar and SubSidebar */}
-      {isMobileSidebarOpen && (
+      {/* Mobile Sidebar and SubSidebar - Hidden for now */}
+      {/* {isMobileSidebarOpen && (
         <>
           <DocMobileSidebar />
           {isSubSidebarOpen && <DocMobileSubSidebar />}
         </>
-      )}
+      )} */}
 
       {/* Desktop Main Content */}
       <main
         className="flex-1 overflow-y-auto p-0 transition-all duration-300 hidden lg:block"
         style={{
-          width: `calc(100vw - ${sidebarWidth + subSidebarWidth}px)`,
-          marginLeft: `${marginLeft}px`,
+          width: `calc(100vw - ${sidebarWidth + subSidebarWidth}px)`, // Now full width
+          marginLeft: `${marginLeft}px`, // Now 0px
           height: "calc(100vh - 56px)",
         }}
       >
@@ -75,7 +74,7 @@ const DocumentViewerLayout = ({ isScroll, children }) => {
       <main
         className="flex-1 overflow-y-auto lg:hidden"
         style={{
-          paddingTop: `${mobilePaddingTop}px`, // <-- This line fixes the layout!
+          paddingTop: `${mobilePaddingTop}px`, // Now just 56px
         }}
       >
         {children}

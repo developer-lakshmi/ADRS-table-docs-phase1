@@ -29,7 +29,7 @@ const CreateProjectPage = () => {
   const [activeProjectId, setActiveProjectId] = useState(projectId || null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true); // Add this line
+  const [initialLoading, setInitialLoading] = useState(true);
   const isSubSidebarOpen = useSelector((state) => state.sidebar.isSubSidebarOpen);
   const isSidebarOpen = useSelector((state) => state.sidebar.isSidebarOpen);
   const selectedFiles = useSelector((state) => state.fileSelection.selectedFiles || []);
@@ -39,25 +39,27 @@ const CreateProjectPage = () => {
   // Add state to track active tab:
   const [activeTab, setActiveTab] = useState(0); // 0 for P&ID, 1 for Reference
 
-  const sidebarWidth = isSidebarOpen ? 150 : 32;
-  const subSidebarWidth = isSubSidebarOpen ? 150 : 0;
+  // Hide sidebar for now - set widths to 0
+  const sidebarWidth = 0; // isSidebarOpen ? 150 : 32;
+  const subSidebarWidth = 0; // isSubSidebarOpen ? 150 : 0;
   const isMobileSidebarOpen = useSelector((state) => state.sidebar.isMobileSidebarOpen);
 
   let topbarTop = "3.5rem";
   let contentPaddingTop = "56px";
 
-  if (isMobileSidebarOpen && isSubSidebarOpen) {
-    topbarTop = "13.5rem";
-    contentPaddingTop = "216px";
-  } else if (isMobileSidebarOpen) {
-    topbarTop = "7.5rem";
-    contentPaddingTop = "104px";
-  }
+  // Mobile sidebar handling - commented out for now
+  // if (isMobileSidebarOpen && isSubSidebarOpen) {
+  //   topbarTop = "13.5rem";
+  //   contentPaddingTop = "216px";
+  // } else if (isMobileSidebarOpen) {
+  //   topbarTop = "7.5rem";
+  //   contentPaddingTop = "104px";
+  // }
 
   useEffect(() => {
     const fetchData = async () => {
       await dispatch(fetchProjects());
-      setInitialLoading(false); // Set to false after first fetch
+      setInitialLoading(false);
       if (activeProjectId) {
         dispatch(fetchUploadedFiles(activeProjectId));
       }
@@ -89,14 +91,12 @@ const CreateProjectPage = () => {
     setActiveProjectId(null);
   };
 
-  // Updated handleFileUpload to use direct server upload with category
   const handleFileUpload = (uploadedFiles) => {
     if (!uploadedFiles || uploadedFiles.length === 0) {
       dispatch(showNotification({ message: "No files selected for upload.", type: "info" }));
       return;
     }
 
-    // Determine category based on active tab
     const category = activeTab === 0 ? 'pid' : 'reference';
     
     console.log(`=== Modal Upload Debug ===`);
@@ -104,7 +104,6 @@ const CreateProjectPage = () => {
     console.log(`Category determined: ${category}`);
     console.log(`Files:`, uploadedFiles.map(f => f.name));
 
-    // Create FormData and send directly to server
     const formData = new FormData();
     uploadedFiles.forEach(file => {
       formData.append('files', file);
@@ -112,7 +111,6 @@ const CreateProjectPage = () => {
     formData.append('projectId', activeProjectId);
     formData.append('category', category);
 
-    // Send directly to server
     fetch('http://localhost:5000/upload', {
       method: 'POST',
       body: formData
@@ -121,25 +119,20 @@ const CreateProjectPage = () => {
     .then(result => {
       console.log('Modal upload success:', result);
       
-      // Close modal first
       setIsUploadModalOpen(false);
       
-      // Show success notification
       dispatch(showNotification({
         message: `${uploadedFiles.length} ${category === 'pid' ? 'P&ID' : 'reference'} file(s) uploaded successfully.`,
         type: "success"
       }));
       
-      // Refresh file list
       dispatch(fetchUploadedFiles(activeProjectId));
     })
     .catch(error => {
       console.error('Modal upload error:', error);
       
-      // Close modal even on error
       setIsUploadModalOpen(false);
       
-      // Show error notification
       dispatch(showNotification({
         message: "Failed to upload files to the server.",
         type: "error"
@@ -243,20 +236,19 @@ const CreateProjectPage = () => {
     }
   };
 
-  // Get the tab name for display in upload button
   const getTabDisplayName = () => {
     return activeTab === 0 ? 'P&ID' : 'Reference';
   };
 
   return (
     <div className="relative">
-      {/* Fixed Topbar */}
+      {/* Fixed Topbar - Updated to span full width when sidebar is hidden */}
       <div
-        className="fixed max-sm:!left-0 md:left-8 right-0 z-40 bg-[#f8f9fa] dark:bg-darkTheme border-b border-[#dee2e6] dark:border-gray-700"
+        className="fixed left-0 right-0 z-40 bg-[#f8f9fa] dark:bg-darkTheme border-b border-[#dee2e6] dark:border-gray-700"
         style={{
           top: topbarTop,
-          left: `${sidebarWidth + (isSubSidebarOpen ? 160 : 0)}px`,
-          right: 0,
+          // left: `${sidebarWidth + (isSubSidebarOpen ? 160 : 0)}px`, // Commented out - now starts from left edge
+          // right: 0,
         }}
       >
         {activeProjectId === null ? (
@@ -290,7 +282,6 @@ const CreateProjectPage = () => {
             }
             rightContent={
               <div className="flex items-center space-x-1 sm:space-x-2">
-                {/* Action buttons - responsive layout */}
                 <div className="flex items-center space-x-1 sm:space-x-2">
                   <Tooltip title="Delete" arrow>
                     <span>
@@ -326,20 +317,7 @@ const CreateProjectPage = () => {
                   </Tooltip>
                 </div>
 
-                {/* Updated Upload button with tab awareness */}
                 <div className="flex items-center space-x-2">
-                  {/* Tab indicator */}
-                  {/* <div className="hidden sm:block text-xs">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      activeTab === 0 
-                        ? 'bg-blue-100 text-blue-800' 
-                        : 'bg-green-100 text-green-800'
-                    }`}>
-                      {activeTab === 0 ? '📊 P&ID' : '🤖 Reference'}
-                    </span>
-                  </div> */}
-
-                  {/* Upload button */}
                   <Tooltip title={`Upload to ${getTabDisplayName()} tab`} arrow>
                     <Button
                       onClick={handleUploadFiles}
@@ -377,7 +355,7 @@ const CreateProjectPage = () => {
         {activeProjectId === null ? (
           <ProjectDashboard
             projects={projects}
-            loading={loading || initialLoading} // Use combined loading state
+            loading={loading || initialLoading}
             handleStart={handleStart}
             handleDelete={handleDelete}
             appId={appId}
@@ -389,13 +367,12 @@ const CreateProjectPage = () => {
               onClose={() => setActiveProjectId(null)}
               fileStatuses={fileStatuses}
               setFileStatuses={setFileStatuses}
-              onActiveTabChange={setActiveTab} // Pass the callback
+              onActiveTabChange={setActiveTab}
             />
           </div>
         )}
       </div>
       
-      {/* Updated Upload Modal with tab context */}
       {isUploadModalOpen && (
         <BaseModal
           message={`Upload ${getTabDisplayName()} Files`}

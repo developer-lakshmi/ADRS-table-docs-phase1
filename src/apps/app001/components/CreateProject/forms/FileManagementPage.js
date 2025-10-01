@@ -3,10 +3,12 @@ import { useDispatch, useSelector } from "react-redux";
 import { DataGrid } from "@mui/x-data-grid";
 import Paper from "@mui/material/Paper";
 import { Link } from "react-router-dom";
-import { Button, Box, Tabs, Tab } from "@mui/material";
+import { Button, Box, Tabs, Tab, IconButton } from "@mui/material";
+import { CpuIcon, CheckCircle, AlertTriangle, XCircle, Hourglass } from "lucide-react";
 import { setSelectedFiles } from "../../../../../redux/slices/file-upload/fileSelectionSlice";
 import { showNotification } from "../../../../../redux/slices/notification/notificationSlice";
 import { fetchUploadedFiles, saveNewFilesToDB } from "../../../../../redux/slices/shared/fileUploadSlice";
+import { setFileStatuses } from "../../../../../redux/slices/file-upload/fileStatusSlice";
 import CircularProgress from "@mui/material/CircularProgress";
 import Tooltip from "@mui/material/Tooltip";
 
@@ -55,6 +57,7 @@ const FileManagementPage = ({ projectId, onActiveTabChange }) => {
 
   // Active tab state - 0 for P&ID, 1 for Reference
   const [activeTab, setActiveTab] = useState(0);
+  const [processingFiles, setProcessingFiles] = useState(new Set());
 
   console.log("=== FileManagement Debug ===");
   console.log("All files:", files);
@@ -96,7 +99,28 @@ const FileManagementPage = ({ projectId, onActiveTabChange }) => {
   const pidRows = createRows(pidFiles);
   const referenceRows = createRows(referenceFiles);
 
-  // P&ID columns (with status column)
+  const handleProcessSingleFile = (fileId, fileName) => {
+    setProcessingFiles(prev => new Set([...prev, fileId]));
+    
+    setTimeout(() => {
+      const status = Math.random() > 0.3 ? "success" : "failure";
+      dispatch(setFileStatuses({ [fileId]: status }));
+      setProcessingFiles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(fileId);
+        return newSet;
+      });
+
+      const message = status === "success" 
+        ? `Processing complete for ${fileName}`
+        : `Processing failed for ${fileName}`;
+      const type = status === "success" ? "success" : "error";
+
+      dispatch(showNotification({ message, type }));
+    }, 2000);
+  };
+
+  // P&ID columns (with action and status columns)
   const pidColumns = [
     { field: "serialNo", headerName: "Serial No", width: 150, headerAlign: "center", align: "center" },
     {
@@ -157,31 +181,191 @@ const FileManagementPage = ({ projectId, onActiveTabChange }) => {
       align: "center",
     },
     {
+      field: "action",
+      headerName: "Action",
+      width: 120,
+      headerAlign: "center",
+      align: "center",
+      sortable: false,
+      renderCell: (params) => {
+        const isProcessing = processingFiles.has(params.row.id);
+        const status = fileStatuses[params.row.id];
+        const isSuccess = status === "success";
+        const isApproved = status === "approved";
+        const isNeedApprove = status === "need_approve";
+        const hasFailed = status === "failure";
+        const isNotProcessed = !status; // No status means not processed yet
+        
+        // Determine icon color and tooltip based on status
+        let iconColor, backgroundColor, hoverColor, tooltipText, isClickable;
+        
+        if (isProcessing) {
+          // Currently processing
+          iconColor = "#f59e0b"; // Orange
+          backgroundColor = "#fef3c7"; // Light orange
+          hoverColor = "#fef3c7";
+          tooltipText = "Processing...";
+          isClickable = false;
+        } else if (isSuccess) {
+          // Successfully processed - GREEN (not clickable)
+          iconColor = "#22c55e"; // Green
+          backgroundColor = "#dcfce7"; // Light green
+          hoverColor = "#dcfce7";
+          tooltipText = "Successfully processed";
+          isClickable = false;
+        } else if (isApproved) {
+          // Approved - BLUE (not clickable)
+          iconColor = "#0ea5e9"; // Blue
+          backgroundColor = "#dbeafe"; // Light blue
+          hoverColor = "#dbeafe";
+          tooltipText = "Approved";
+          isClickable = false;
+        } else if (isNeedApprove) {
+          // Needs approval - YELLOW (not clickable)
+          iconColor = "#f59e0b"; // Orange/Yellow
+          backgroundColor = "#fef3c7"; // Light yellow
+          hoverColor = "#fef3c7";
+          tooltipText = "Needs approval";
+          isClickable = false;
+        } else if (hasFailed) {
+          // Failed - RED (clickable to retry)
+          iconColor = "#ef4444"; // Red
+          backgroundColor = "#fecaca"; // Light red
+          hoverColor = "#fca5a5";
+          tooltipText = "Processing failed - Click to retry";
+          isClickable = true;
+        } else {
+          // Not processed yet - ORANGE (clickable to process)
+          iconColor = "#f59e0b"; // Orange
+          backgroundColor = "#fef3c7"; // Light orange
+          hoverColor = "#fed7aa";
+          tooltipText = "Click to process file";
+          isClickable = true;
+        }
+        
+        return (
+          <Tooltip title={tooltipText} arrow>
+            <span>
+              <IconButton
+                onClick={() => {
+                  if (isClickable && !isProcessing) {
+                    handleProcessSingleFile(params.row.id, params.row.name);
+                  }
+                }}
+                disabled={!isClickable || isProcessing}
+                size="small"
+                sx={{
+                  backgroundColor: backgroundColor,
+                  color: iconColor,
+                  border: `1px solid ${iconColor}`,
+                  "&:hover": {
+                    backgroundColor: isClickable ? hoverColor : backgroundColor,
+                    transform: isClickable && !isProcessing ? "scale(1.05)" : "none",
+                    cursor: isClickable ? "pointer" : "default",
+                  },
+                  "&:disabled": {
+                    backgroundColor: backgroundColor,
+                    color: iconColor,
+                    border: `1px solid ${iconColor}`,
+                    opacity: isClickable ? 0.6 : 1, // Full opacity for completed states
+                    cursor: "default",
+                  },
+                  width: 32,
+                  height: 32,
+                  transition: "all 0.2s ease-in-out",
+                }}
+              >
+                {isProcessing ? (
+                  <CircularProgress size={16} sx={{ color: iconColor }} />
+                ) : (
+                  <CpuIcon size={16} />
+                )}
+              </IconButton>
+            </span>
+          </Tooltip>
+        );
+      },
+    },
+    {
       field: "status",
       headerName: "Status",
-      width: 170,
+      width: 120,
       headerAlign: "center",
       align: "center",
       renderCell: (params) => {
-        let color = "#9ca3af"; // gray
-        if (params.value === "Processed") color = "#22c55e"; // green
-        if (params.value === "Approved") color = "#0ea5e9"; // blue
-        if (params.value === "Need to approve") color = "#f59e42"; // orange
+        const status = fileStatuses[params.row.id];
+        const isProcessing = processingFiles.has(params.row.id);
+        
+        // Show animated sand clock if file is being processed
+        if (isProcessing) {
+          return (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+              <Tooltip title="Processing..." arrow>
+                <div 
+                  className="animate-spin"
+                  style={{
+                    animation: 'sand-timer 2s ease-in-out infinite alternate',
+                    transformOrigin: 'center'
+                  }}
+                >
+                  <Hourglass 
+                    size={18} 
+                    style={{ 
+                      color: "#f59e0b",
+                      filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
+                    }}
+                  />
+                </div>
+              </Tooltip>
+            </div>
+          );
+        }
+        
+        // Show status icons based on processing result
+        let icon = null;
+        let tooltipText = "Not processed";
+        
+        if (status === "success") {
+          icon = <CheckCircle size={16} style={{ color: "#22c55e" }} />;
+          tooltipText = "Successfully processed";
+        } else if (status === "approved") {
+          icon = <CheckCircle size={16} style={{ color: "#0ea5e9" }} />;
+          tooltipText = "Approved";
+        } else if (status === "need_approve") {
+          icon = <AlertTriangle size={16} style={{ color: "#f59e0b" }} />;
+          tooltipText = "Needs approval";
+        } else if (status === "failure") {
+          icon = <XCircle size={16} style={{ color: "#ef4444" }} />;
+          tooltipText = "Processing failed";
+        } else {
+          // Default dot for not processed
+          icon = (
+            <div
+              style={{
+                width: 12,
+                height: 12,
+                borderRadius: "50%",
+                backgroundColor: "#9ca3af",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.12)"
+              }}
+            />
+          );
+        }
+        
         return (
-          <span style={{
-            color,
-            fontWeight: 600,
-            fontSize: 15,
-            letterSpacing: 0.2,
-          }}>
-            {params.value}
-          </span>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+            <Tooltip title={tooltipText} arrow>
+              <div style={{ cursor: "pointer" }}>
+                {icon}
+              </div>
+            </Tooltip>
+          </div>
         );
       }
     },
   ];
 
-  // Reference columns (without status column)
+  // Reference columns (without action and status columns)
   const referenceColumns = [
     { field: "serialNo", headerName: "Serial No", width: 150, headerAlign: "center", align: "center" },
     {
@@ -366,45 +550,32 @@ const FileManagementPage = ({ projectId, onActiveTabChange }) => {
           
 
           {/* Tab Headers */}
-          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-            <Tabs 
-              value={activeTab} 
-              onChange={handleTabChange} 
-              aria-label="file management tabs"
-              sx={{
-                '& .MuiTab-root': {
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  fontSize: '1rem',
-                  minWidth: 200,
-                },
-              }}
-            >
-              <Tab 
-                label={
-                  <span className="flex items-center gap-2">
-                    📊 P&ID Files ({pidFiles.length})
-                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
-                      Processing
-                    </span>
-                  </span>
-                } 
-                id="tab-0" 
-                aria-controls="tabpanel-0" 
-              />
-              <Tab 
-                label={
-                  <span className="flex items-center gap-2">
-                    🤖 Reference Documents ({referenceFiles.length})
-                    <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
-                       Model Study
-                    </span>
-                  </span>
-                } 
-                id="tab-1" 
-                aria-controls="tabpanel-1" 
-              />
-            </Tabs>
+          <Box sx={{ borderBottom: 'none', mb: 3 }}>
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={() => handleTabChange(null, 0)}
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                  activeTab === 0
+                    ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                }`}
+              >
+                📄 Subject Documents
+               
+              </button>
+              
+              <button
+                onClick={() => handleTabChange(null, 1)}
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                  activeTab === 1
+                    ? 'bg-green-600 text-white shadow-md hover:bg-green-700'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                }`}
+              >
+                🤖 Reference Documents
+                
+              </button>
+            </div>
           </Box>
 
           {/* File Table or Empty State */}
@@ -434,14 +605,14 @@ const FileManagementPage = ({ projectId, onActiveTabChange }) => {
                   fontFamily: "inherit",
                   fontSize: "1rem",
                   "& .MuiDataGrid-columnHeaders": {
-                    background: activeTab === 0 ? "#f3f4f6" : "#f0f9ff",
+                    background: activeTab === 0 ? "#eff6ff" : "#f0fdf4",
                     fontWeight: 700,
                     fontSize: "1rem",
                   },
                   "& .MuiDataGrid-row": {
                     background: "#fff",
                     "&:hover": {
-                      background: activeTab === 0 ? "#f1f5f9" : "#f0f9ff",
+                      background: activeTab === 0 ? "#dbeafe" : "#dcfce7",
                     },
                   },
                   "& .MuiDataGrid-cell": {
@@ -475,8 +646,8 @@ const FileManagementPage = ({ projectId, onActiveTabChange }) => {
                 <div className="mb-4">
                   <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${
                     activeTab === 0 
-                      ? 'bg-blue-100 text-blue-800' 
-                      : 'bg-green-100 text-green-800'
+                      ? 'bg-blue-50 text-blue-700 border border-blue-200' 
+                      : 'bg-green-50 text-green-700 border border-green-200'
                   }`}>
                     {activeTab === 0 ? '📊 P&ID Processing' : '🤖 AI Model Study'}
                   </div>
@@ -507,10 +678,10 @@ const FileManagementPage = ({ projectId, onActiveTabChange }) => {
                 />
                 <label 
                   htmlFor={`file-upload-input-${activeTab}`} 
-                  className={`inline-flex items-center px-6 py-3 rounded-lg cursor-pointer transition-colors font-medium ${
+                  className={`inline-flex items-center px-6 py-3 rounded-lg cursor-pointer transition-colors font-medium shadow-sm ${
                     activeTab === 0 
-                      ? 'bg-blue-500 hover:bg-blue-600 text-white' 
-                      : 'bg-green-500 hover:bg-green-600 text-white'
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                      : 'bg-green-600 hover:bg-green-700 text-white'
                   }`}
                 >
                   {activeTab === 0 ? '📊 Browse P&ID Files' : '🤖 Browse Reference Documents'}
