@@ -112,9 +112,7 @@ const ExportDropdown = ({ onExport }) => {
 
 /**
  * Main Document Viewer Page Component
- * Layout: 12-column grid system
- * - 4 columns: Document preview 
- * - 8 columns: Data table
+ * Layout: PDF viewer (4/12) and Data table (8/12)
  */
 const DocViewPage = () => {
   const navigate = useNavigate();
@@ -199,19 +197,6 @@ const DocViewPage = () => {
           }
           rightContent={
             <div className="flex items-center space-x-2 sm:space-x-3">
-              {/* Document Download */}
-              {/* <Tooltip title="Download Original Document">
-                <button
-                  className="flex items-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-                  onClick={handleDownload}
-                  disabled={!file}
-                >
-                  <Download size={14} className="mr-1" />
-                  <span className="hidden sm:inline">Document</span>
-                  <span className="sm:hidden">Doc</span>
-                </button>
-              </Tooltip> */}
-
               {/* Print Table */}
               <Tooltip title="Print Analysis Table">
                 <button
@@ -236,9 +221,9 @@ const DocViewPage = () => {
 
       {/* Content Below Topbar */}
       <div className="pt-14 h-full">
-        <div className="grid grid-cols-12 gap-4 h-full p-4">
-          {/* Document Viewer - 4 columns */}
-          <div className="col-span-12 lg:col-span-4 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 flex flex-col">
+        <div className="h-full p-4 flex gap-4">
+          {/* Document Viewer - Fixed height to match table */}
+          <div className="w-full lg:w-4/12 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 flex flex-col">
             <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
               <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 flex items-center">
                 <Eye size={20} className="mr-2" />
@@ -273,14 +258,16 @@ const DocViewPage = () => {
             </div>
           </div>
 
-          {/* Data Table - 8 columns */}
-          <DocumentDataTable 
-            ref={documentDataTableRef}
-            title="P&ID Analysis Results"
-            subtitle="Complete analysis from uploaded document"
-            useHtmlData={true} // Change this to true
-            useMockData={true} // Add this to ensure mock data is used
-          />
+          {/* Data Table - Matching height with PDF viewer */}
+          <div className="flex-1 min-w-0">
+            <DocumentDataTable 
+              ref={documentDataTableRef}
+              title="P&ID Analysis Results"
+              subtitle="Complete analysis from uploaded document"
+              useHtmlData={true}
+              useMockData={true}
+            />
+          </div>
         </div>
       </div>
     </div>

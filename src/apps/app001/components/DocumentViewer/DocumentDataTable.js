@@ -1,90 +1,119 @@
-import React, { useState, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useCallback, useMemo, forwardRef, useImperativeHandle, useEffect } from 'react';
 import { DataGrid } from "@mui/x-data-grid";
-import { Check, X, Edit3 } from "lucide-react";
-import { mockHtmlApiResponse, mockTableData, DATA_SOURCE_CONFIG } from './mockData';
+import { Check, X, Edit3, AlertTriangle, CheckCircle, Clock, BarChart3, Maximize2, Minimize2 } from "lucide-react";
 import { handleExport, handlePrint } from './exportUtils';
+import { getAnalysisData } from './dataService';
 
 /**
- * Document Data Table Component
- * Displays P&ID findings and issues extracted from documents
- * Features: Editable remarks, clickable approval buttons, export functionality
+ * Document Data Table Component with built-in fullscreen functionality
  */
-
-// Function to parse HTML table data
-const parseHtmlTableData = (htmlString) => {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(htmlString, 'text/html');
-  const rows = doc.querySelectorAll('tbody tr');
-  
-  return Array.from(rows).map((row, index) => {
-    const cells = row.querySelectorAll('td');
-    return {
-      id: index + 1,
-      pidNumber: cells[0]?.textContent?.trim() || '',
-      issueFound: cells[1]?.textContent?.trim() || '',
-      actionRequired: cells[2]?.textContent?.trim() || '',
-      approval: 'Not', // Default approval status
-      remark: '', // Default empty remark
-      status: 'Pending' // Default status
-    };
-  });
-};
-
 const DocumentDataTable = forwardRef(({ 
   data = [],
   title = "P&ID Analysis Results",
-  subtitle = "Issues and actions identified from document analysis",
-  useHtmlData = DATA_SOURCE_CONFIG.USE_HTML_DATA,
-  htmlData = null,
-  useMockData = true // Default to true instead of config
+  subtitle = "Complete analysis from uploaded document",
+  useHtmlData = true,
+  useMockData = true,
+  isFullscreen = false,
+  onFullscreenToggle = null
 }, ref) => {
   
-  // Determine data source based on configuration
-  const getDataSource = useMemo(() => {
-    // If real data is provided via props, use it
-    if (data.length > 0) {
-      return data;
-    }
-    
-    // Use mock data based on configuration
-    if (useHtmlData) {
-      const htmlToUse = htmlData || mockHtmlApiResponse;
-      return parseHtmlTableData(htmlToUse);
-    } else {
-      return mockTableData;
-    }
-  }, [data, useHtmlData, htmlData]); // Remove useMockData dependency
-
-  const [tableData, setTableData] = useState(getDataSource);
+  const [tableData, setTableData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [editingRemark, setEditingRemark] = useState(null);
   const [remarkValue, setRemarkValue] = useState('');
+  const [internalFullscreen, setInternalFullscreen] = useState(false);
 
-  // Update table data when dependencies change
-  React.useEffect(() => {
-    setTableData(getDataSource);
-  }, [getDataSource]);
+  // Use internal fullscreen state if no external control provided
+  const isTableFullscreen = onFullscreenToggle ? isFullscreen : internalFullscreen;
 
-  // Expose export and print methods to parent component
+  // Load data when component mounts - Fixed to prevent infinite loop
+  useEffect(() => {
+    let isMounted = true; // Flag to prevent state updates if component unmounts
+
+    const loadData = async () => {
+      try {
+        if (!isMounted) return; // Prevent state update if unmounted
+        
+        setLoading(true);
+        setError(null);
+        
+        const analysisData = await getAnalysisData(null, null, data);
+        
+        if (!isMounted) return; // Prevent state update if unmounted
+        
+        setTableData(analysisData);
+        console.log(`Loaded ${analysisData.length} analysis records`);
+      } catch (err) {
+        if (!isMounted) return; // Prevent state update if unmounted
+        
+        console.error('Failed to load analysis data:', err);
+        setError(err.message);
+        setTableData([]);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadData();
+
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      isMounted = false;
+    };
+  }, []); // Remove 'data' dependency to prevent infinite loop
+
+  // Handle fullscreen toggle - Fixed to prevent infinite updates
+  const handleFullscreenToggle = useCallback(() => {
+    if (onFullscreenToggle) {
+      onFullscreenToggle();
+    } else {
+      setInternalFullscreen(prev => !prev);
+    }
+  }, [onFullscreenToggle]);
+
+  // Handle ESC key to exit fullscreen - Fixed dependencies
+  useEffect(() => {
+    const handleEscKey = (event) => {
+      if (event.key === 'Escape' && isTableFullscreen) {
+        handleFullscreenToggle();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscKey);
+    return () => {
+      document.removeEventListener('keydown', handleEscKey);
+    };
+  }, [isTableFullscreen, handleFullscreenToggle]);
+
+  // Expose methods to parent component
   useImperativeHandle(ref, () => ({
     exportData: (format) => {
       handleExport(format, tableData, title);
     },
     printTable: () => {
       handlePrint(tableData, title);
-    }
-  }));
+    },
+    refreshData: async () => {
+      const analysisData = await getAnalysisData(null, null, []);
+      setTableData(analysisData);
+      return analysisData;
+    },
+    getTableData: () => tableData
+  }), [tableData, title]); // Added dependencies
 
-  // Handle approval status change with useCallback
+  // Handle approval status change
   const handleApprovalChange = useCallback((id, newApproval) => {
     setTableData(prev => prev.map(row => {
       if (row.id === id) {
-        // Update status based on approval and clear remark if approved
         let newStatus = 'Pending';
         let newRemark = row.remark;
         
         if (newApproval === 'Approved') {
           newStatus = 'Approved';
-          newRemark = ''; // Clear remark for approved items
+          newRemark = '';
         } else if (newApproval === 'Ignored') {
           newStatus = 'Ignored';
         }
@@ -95,7 +124,7 @@ const DocumentDataTable = forwardRef(({
     }));
   }, []);
 
-  // Handle remark editing with useCallback
+  // Handle remark editing
   const handleRemarkEdit = useCallback((id, currentRemark) => {
     setEditingRemark(id);
     setRemarkValue(currentRemark || '');
@@ -114,14 +143,27 @@ const DocumentDataTable = forwardRef(({
     setRemarkValue('');
   }, []);
 
-  // Memoize table columns to prevent re-creation on every render
+  // Calculate statistics - Memoized to prevent recalculation
+  const stats = useMemo(() => {
+    const approved = tableData.filter(row => row.approval === 'Approved').length;
+    const ignored = tableData.filter(row => row.approval === 'Ignored').length;
+    const pending = tableData.filter(row => row.approval === 'Not' || !row.approval || row.approval === 'Pending').length;
+    const total = tableData.length;
+    
+    return { approved, ignored, pending, total };
+  }, [tableData]);
+
+  // Table columns definition - Memoized to prevent recreation
   const tableColumns = useMemo(() => [
     { 
       field: 'pidNumber', 
       headerName: 'P&ID Number', 
-      width: 180,
+      width: 160,
       headerAlign: 'center',
-      align: 'left'
+      align: 'center',
+      renderCell: (params) => (
+        <div className="font-mono text-xs">{params.value}</div>
+      )
     },
     { 
       field: 'issueFound', 
@@ -130,19 +172,7 @@ const DocumentDataTable = forwardRef(({
       headerAlign: 'center',
       align: 'left',
       renderCell: (params) => (
-        <div 
-          style={{
-            whiteSpace: 'normal',
-            wordWrap: 'break-word',
-            lineHeight: '1.3',
-            padding: '8px 0',
-            maxHeight: '150px',
-            overflow: 'auto'
-          }}
-          title={params.value}
-        >
-          {params.value}
-        </div>
+        <div className="text-sm py-2 leading-relaxed">{params.value}</div>
       )
     },
     { 
@@ -152,19 +182,7 @@ const DocumentDataTable = forwardRef(({
       headerAlign: 'center',
       align: 'left',
       renderCell: (params) => (
-        <div 
-          style={{
-            whiteSpace: 'normal',
-            wordWrap: 'break-word',
-            lineHeight: '1.3',
-            padding: '8px 0',
-            maxHeight: '150px',
-            overflow: 'auto'
-          }}
-          title={params.value}
-        >
-          {params.value}
-        </div>
+        <div className="text-sm py-2 leading-relaxed">{params.value}</div>
       )
     },
     { 
@@ -177,26 +195,24 @@ const DocumentDataTable = forwardRef(({
         <div className="flex gap-1">
           <button
             onClick={() => handleApprovalChange(params.row.id, 'Approved')}
-            className={`px-3 py-1 rounded text-xs font-medium transition-colors flex items-center ${
+            className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
               params.value === 'Approved' 
                 ? 'bg-green-500 text-white' 
-                : 'bg-green-100 text-green-700 hover:bg-green-200'
+                : 'bg-green-100 text-green-800 hover:bg-green-200'
             }`}
-            title="Approve this item"
           >
-            <Check size={12} className="mr-1" />
+            <Check size={12} className="inline mr-1" />
             Approve
           </button>
           <button
             onClick={() => handleApprovalChange(params.row.id, 'Ignored')}
-            className={`px-3 py-1 rounded text-xs font-medium transition-colors flex items-center ${
+            className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
               params.value === 'Ignored' 
                 ? 'bg-red-500 text-white' 
-                : 'bg-red-100 text-red-700 hover:bg-red-200'
+                : 'bg-red-100 text-red-800 hover:bg-red-200'
             }`}
-            title="Ignore this item"
           >
-            <X size={12} className="mr-1" />
+            <X size={12} className="inline mr-1" />
             Ignore
           </button>
         </div>
@@ -205,63 +221,66 @@ const DocumentDataTable = forwardRef(({
     { 
       field: 'remark', 
       headerName: 'Remark', 
-      width: 350,
+      width: 300,
       headerAlign: 'center',
       align: 'left',
       renderCell: (params) => {
-        // Hide remark column for approved items
         if (params.row.approval === 'Approved') {
           return (
-            <div className="w-full text-center text-gray-400 italic text-xs">
-              No remark needed
+            <div className="text-center py-4">
+              <span className="text-green-600 text-xs">✓ Approved</span>
             </div>
           );
         }
 
         return (
-          <div className="w-full">
+          <div className="w-full py-1">
             {editingRemark === params.row.id ? (
-              <div className="flex items-center gap-1">
+              <div className="space-y-2">
                 <textarea
                   value={remarkValue}
                   onChange={(e) => setRemarkValue(e.target.value)}
-                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:border-blue-500 resize-none"
+                  className="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:border-blue-500 resize-none"
                   placeholder="Enter remark (max 500 characters)..."
                   autoFocus
                   rows={3}
                   maxLength={500}
-                  onKeyPress={(e) => {
+                  onKeyDown={(e) => {
                     if (e.key === 'Enter' && e.ctrlKey) handleRemarkSave(params.row.id);
                     if (e.key === 'Escape') handleRemarkCancel();
                   }}
                 />
-                <div className="flex flex-col gap-1">
-                  <button
-                    onClick={() => handleRemarkSave(params.row.id)}
-                    className="px-1 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
-                    title="Save (Ctrl+Enter)"
-                  >
-                    <Check size={12} />
-                  </button>
-                  <button
-                    onClick={handleRemarkCancel}
-                    className="px-1 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
-                    title="Cancel (Esc)"
-                  >
-                    <X size={12} />
-                  </button>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-gray-500">{remarkValue.length}/500</span>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => handleRemarkSave(params.row.id)}
+                      className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={handleRemarkCancel}
+                      className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (
               <div 
-                className="flex items-start justify-between group cursor-pointer hover:bg-gray-50 p-1 rounded min-h-[60px]"
+                className="w-full cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors min-h-[40px] flex items-center"
                 onClick={() => handleRemarkEdit(params.row.id, params.value)}
-                title="Click to edit remark"
               >
-                <span className="flex-1 text-xs leading-relaxed" style={{ wordWrap: 'break-word' }}>
-                  {params.value || 'Click to add remark...'}
-                </span>
-                <Edit3 size={12} className="opacity-0 group-hover:opacity-100 transition-opacity ml-1 text-gray-400 flex-shrink-0" />
+                {params.value ? (
+                  <div className="text-sm">{params.value}</div>
+                ) : (
+                  <div className="text-sm text-gray-400 italic flex items-center">
+                    <Edit3 size={12} className="mr-1" />
+                    Click to add remark...
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -274,38 +293,215 @@ const DocumentDataTable = forwardRef(({
       width: 120,
       headerAlign: 'center',
       align: 'center',
-      renderCell: (params) => (
-        <span 
-          style={{
-            padding: '6px 12px',
-            borderRadius: '20px',
-            fontSize: '12px',
-            fontWeight: 'bold',
-            color: 'white',
-            backgroundColor: 
-              params.value === 'Approved' ? '#4caf50' :
-              params.value === 'Ignored' ? '#f44336' :
-              params.value === 'Pending' ? '#9e9e9e' : '#2196f3',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px'
-          }}
-        >
-          {params.value}
-        </span>
-      )
+      renderCell: (params) => {
+        const getStatusStyle = (status) => {
+          switch (status) {
+            case 'Approved':
+              return 'bg-green-100 text-green-800';
+            case 'Ignored':
+              return 'bg-red-100 text-red-800';
+            case 'Pending':
+            default:
+              return 'bg-yellow-100 text-yellow-800';
+          }
+        };
+
+        const getStatusIcon = (status) => {
+          switch (status) {
+            case 'Approved':
+              return <CheckCircle size={12} className="mr-1" />;
+            case 'Ignored':
+              return <X size={12} className="mr-1" />;
+            case 'Pending':
+            default:
+              return <Clock size={12} className="mr-1" />;
+          }
+        };
+
+        return (
+          <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusStyle(params.value)}`}>
+            {getStatusIcon(params.value)}
+            {params.value}
+          </div>
+        );
+      }
     },
   ], [editingRemark, remarkValue, handleApprovalChange, handleRemarkEdit, handleRemarkSave, handleRemarkCancel]);
 
-  return (
-    <div className="col-span-12 lg:col-span-8 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 flex flex-col max-h-full">
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-          {title}
-        </h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          {subtitle} ({tableData.length} issues found)
-        </p>
+  // Render fullscreen mode
+  if (isTableFullscreen) {
+    return (
+      <div className="fixed inset-0 z-50 bg-white dark:bg-gray-900">
+        <div className="h-full flex flex-col">
+          {/* Fullscreen Header */}
+          <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <BarChart3 size={24} className="mr-3 text-indigo-600" />
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
+                    {title} - Fullscreen View
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-400 mt-1">
+                    {subtitle} ({stats.total} issues found)
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-4">
+                {/* Statistics in fullscreen */}
+                <div className="flex items-center space-x-6 text-sm">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-gray-800 dark:text-gray-200">{stats.total}</div>
+                    <div className="text-gray-500">Total</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xl font-semibold text-green-600">{stats.approved}</div>
+                    <div className="text-gray-500">Approved</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xl font-semibold text-red-600">{stats.ignored}</div>
+                    <div className="text-gray-500">Ignored</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xl font-semibold text-yellow-600">{stats.pending}</div>
+                    <div className="text-gray-500">Pending</div>
+                  </div>
+                </div>
+                <button
+                  onClick={handleFullscreenToggle}
+                  className="flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                >
+                  <Minimize2 size={16} className="mr-2" />
+                  Exit Fullscreen
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          {/* Fullscreen Table Content */}
+          <div className="flex-1 overflow-hidden p-6">
+            <div className="h-full bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <DataGrid
+                rows={tableData}
+                columns={tableColumns}
+                initialState={{
+                  pagination: {
+                    paginationModel: { page: 0, pageSize: 25 },
+                  },
+                }}
+                pageSizeOptions={[10, 25, 50, 100]}
+                disableSelectionOnClick
+                className="border-0"
+                getRowHeight={() => 'auto'}
+                sx={{
+                  '& .MuiDataGrid-root': {
+                    border: 'none',
+                    fontSize: '14px',
+                  },
+                  '& .MuiDataGrid-cell': {
+                    borderBottom: '1px solid #f1f5f9',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    padding: '12px',
+                  },
+                  '& .MuiDataGrid-columnHeaders': {
+                    backgroundColor: '#f8fafc',
+                    borderBottom: '2px solid #e2e8f0',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                  },
+                  '& .MuiDataGrid-row': {
+                    minHeight: '60px !important',
+                    '&:hover': {
+                      backgroundColor: '#f8fafc',
+                    },
+                  },
+                }}
+              />
+            </div>
+          </div>
+        </div>
       </div>
+    );
+  }
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 flex flex-col h-full">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 flex items-center">
+            <BarChart3 size={20} className="mr-2" />
+            {title}
+          </h3>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">Loading analysis data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 flex flex-col h-full">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 flex items-center">
+            <AlertTriangle size={20} className="mr-2 text-red-500" />
+            Analysis Error
+          </h3>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <AlertTriangle size={48} className="text-red-500 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400 mb-4">{error}</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Normal table view
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 flex flex-col h-full">
+      {/* Table Header with Fullscreen Button */}
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <BarChart3 size={20} className="mr-2 text-indigo-600" />
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                {title}
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {subtitle} ({stats.total} issues found)
+              </p>
+            </div>
+          </div>
+          
+          {/* Fullscreen Button */}
+          <button
+            onClick={handleFullscreenToggle}
+            className="flex items-center px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm"
+            title="View in fullscreen (ESC to exit)"
+          >
+            <Maximize2 size={16} className="mr-2" />
+            Fullscreen
+          </button>
+        </div>
+      </div>
+
+      {/* Table Content */}
       <div className="flex-1 overflow-hidden">
         <DataGrid
           rows={tableData}
@@ -322,37 +518,29 @@ const DocumentDataTable = forwardRef(({
           sx={{
             '& .MuiDataGrid-root': {
               border: 'none',
+              fontSize: '14px',
             },
             '& .MuiDataGrid-cell': {
-              borderBottom: '1px solid #f0f0f0',
+              borderBottom: '1px solid #f1f5f9',
               display: 'flex',
               alignItems: 'flex-start',
-              padding: '12px 8px',
-              lineHeight: '1.4',
+              padding: '12px',
             },
             '& .MuiDataGrid-columnHeaders': {
-              backgroundColor: '#f8f9fa',
-              borderBottom: '2px solid #dee2e6',
-              fontSize: '14px',
-              fontWeight: 'bold',
+              backgroundColor: '#f8fafc',
+              borderBottom: '2px solid #e2e8f0',
+              fontSize: '13px',
+              fontWeight: 600,
             },
             '& .MuiDataGrid-row': {
-              minHeight: '80px !important',
+              minHeight: '60px !important',
               '&:hover': {
-                backgroundColor: '#f8f9fa',
-              },
-              '&:nth-of-type(even)': {
-                backgroundColor: '#fafafa',
+                backgroundColor: '#f8fafc',
               },
             },
-            '& .MuiDataGrid-cell--textLeft': {
-              justifyContent: 'flex-start',
-            },
-            '& .MuiDataGrid-cell--textCenter': {
-              justifyContent: 'center',
-            },
-            '& .MuiDataGrid-virtualScroller': {
-              overflowX: 'auto',
+            '& .MuiDataGrid-footerContainer': {
+              borderTop: '1px solid #e2e8f0',
+              backgroundColor: '#f8fafc',
             },
           }}
         />
@@ -360,5 +548,7 @@ const DocumentDataTable = forwardRef(({
     </div>
   );
 });
+
+DocumentDataTable.displayName = 'DocumentDataTable';
 
 export default React.memo(DocumentDataTable);
