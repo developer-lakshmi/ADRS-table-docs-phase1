@@ -170,102 +170,22 @@
     "category": "pid"
   },
   {
-    "id": "1759222106275-16-01-08-1677-1.pid.pdf",
-    "name": "16-01-08-1677-1.pid.pdf",
-    "size": 140256,
+    "id": "1759263522460-P16093-30-99-08-1601_Legend.pdf",
+    "name": "P16093-30-99-08-1601_Legend.pdf",
+    "size": 7124789,
     "type": "application/pdf",
-    "url": "http://localhost:5000/uploads/1759222106275-16-01-08-1677-1.pid.pdf",
-    "lastModified": 1759222106307,
+    "url": "http://localhost:5000/uploads/1759263522460-P16093-30-99-08-1601_Legend.pdf",
+    "lastModified": 1759263522600,
     "projectId": "wsctl6k1y",
     "category": "reference"
   },
   {
-    "id": "1759222106280-16-01-08-1678-1.pid.pdf",
-    "name": "16-01-08-1678-1.pid.pdf",
-    "size": 181655,
+    "id": "1759263522564-Automation and Instrumentation Design Philosophy_Page 125.pdf",
+    "name": "Automation and Instrumentation Design Philosophy_Page 125.pdf",
+    "size": 3477997,
     "type": "application/pdf",
-    "url": "http://localhost:5000/uploads/1759222106280-16-01-08-1678-1.pid.pdf",
-    "lastModified": 1759222106307,
-    "projectId": "wsctl6k1y",
-    "category": "reference"
-  },
-  {
-    "id": "1759222106283-16-01-08-1679-1.pid.pdf",
-    "name": "16-01-08-1679-1.pid.pdf",
-    "size": 204786,
-    "type": "application/pdf",
-    "url": "http://localhost:5000/uploads/1759222106283-16-01-08-1679-1.pid.pdf",
-    "lastModified": 1759222106307,
-    "projectId": "wsctl6k1y",
-    "category": "reference"
-  },
-  {
-    "id": "1759222106286-16-01-08-1680-1.pid.pdf",
-    "name": "16-01-08-1680-1.pid.pdf",
-    "size": 157840,
-    "type": "application/pdf",
-    "url": "http://localhost:5000/uploads/1759222106286-16-01-08-1680-1.pid.pdf",
-    "lastModified": 1759222106308,
-    "projectId": "wsctl6k1y",
-    "category": "reference"
-  },
-  {
-    "id": "1759222106290-16-01-08-1681-1.pid.pdf",
-    "name": "16-01-08-1681-1.pid.pdf",
-    "size": 122817,
-    "type": "application/pdf",
-    "url": "http://localhost:5000/uploads/1759222106290-16-01-08-1681-1.pid.pdf",
-    "lastModified": 1759222106308,
-    "projectId": "wsctl6k1y",
-    "category": "reference"
-  },
-  {
-    "id": "1759222106293-16-01-08-1682-1.pid.pdf",
-    "name": "16-01-08-1682-1.pid.pdf",
-    "size": 189338,
-    "type": "application/pdf",
-    "url": "http://localhost:5000/uploads/1759222106293-16-01-08-1682-1.pid.pdf",
-    "lastModified": 1759222106308,
-    "projectId": "wsctl6k1y",
-    "category": "reference"
-  },
-  {
-    "id": "1759222106299-16-01-08-1683-1.pid.pdf",
-    "name": "16-01-08-1683-1.pid.pdf",
-    "size": 142761,
-    "type": "application/pdf",
-    "url": "http://localhost:5000/uploads/1759222106299-16-01-08-1683-1.pid.pdf",
-    "lastModified": 1759222106308,
-    "projectId": "wsctl6k1y",
-    "category": "reference"
-  },
-  {
-    "id": "1759222106301-16-01-08-1684-1.pid.pdf",
-    "name": "16-01-08-1684-1.pid.pdf",
-    "size": 123276,
-    "type": "application/pdf",
-    "url": "http://localhost:5000/uploads/1759222106301-16-01-08-1684-1.pid.pdf",
-    "lastModified": 1759222106308,
-    "projectId": "wsctl6k1y",
-    "category": "reference"
-  },
-  {
-    "id": "1759222266068-P16093-16-01-08-1677-1.pdf_annotated (2).pdf",
-    "name": "P16093-16-01-08-1677-1.pdf_annotated (2).pdf",
-    "size": 6762540,
-    "type": "application/pdf",
-    "url": "http://localhost:5000/uploads/1759222266068-P16093-16-01-08-1677-1.pdf_annotated (2).pdf",
-    "lastModified": 1759222266590,
-    "projectId": "wsctl6k1y",
-    "category": "reference"
-  },
-  {
-    "id": "1759228450962-P16093-16-01-08-1677-1.pdf_annotated.pdf",
-    "name": "P16093-16-01-08-1677-1.pdf_annotated.pdf",
-    "size": 6762540,
-    "type": "application/pdf",
-    "url": "http://localhost:5000/uploads/1759228450962-P16093-16-01-08-1677-1.pdf_annotated.pdf",
-    "lastModified": 1759228451545,
+    "url": "http://localhost:5000/uploads/1759263522564-Automation and Instrumentation Design Philosophy_Page 125.pdf",
+    "lastModified": 1759263522600,
     "projectId": "wsctl6k1y",
     "category": "reference"
   }

@@ -20,6 +20,7 @@
     "framer-motion": "^12.6.3",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.3",
+    "jspdf-autotable": "^5.0.2",
     "konva": "^10.0.2",
     "lottie-react": "^2.4.1",
     "lucide-react": "^0.479.0",
@@ -34,7 +35,8 @@
     "react-tiny-popover": "^8.1.6",
     "redux-persist": "^6.0.0",
     "simplify-js": "^1.2.4",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "xlsx": "^0.18.5"
   },
   "scripts": {
     "start": "react-scripts start",
