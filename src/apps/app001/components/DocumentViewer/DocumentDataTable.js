@@ -26,7 +26,7 @@ const parseHtmlTableData = (htmlString) => {
       actionRequired: cells[2]?.textContent?.trim() || '',
       approval: 'Not', // Default approval status
       remark: '', // Default empty remark
-      status: 'Grey' // Default status
+      status: 'Pending' // Changed default status
     };
   });
 };
@@ -185,26 +185,26 @@ const initialTableData = [
     issueFound: "Thermowell for TIT-3610-14A shown with 2\" connection.", 
     actionRequired: "TIT tag no connection sizes are indicated as 2'' which are higher than the minimum specified size of 1.5'' as per 'AGES-PH-04-001, Rev-1, Table 14.1 instxxxxxxxx'. The selected size of 2'' is as per project Legend Drawings.", 
     approval: "Approved",
-    remark: "jbscxjbjhbdjhwb", 
-    status: "Green" 
+    remark: "", 
+    status: "Approved" 
   },
   { 
     id: 2, 
     pidNumber: "P16093-16-01-08-1684-2", 
     issueFound: "Valve orientation incorrect in line 6\".", 
     actionRequired: "Verify valve orientation per P&ID standards and correct as needed.", 
-    approval: "Not Approved",
-    remark: "Engineering review required", 
-    status: "Red" 
+    approval: "Ignored",
+    remark: "Engineering review required for proper valve positioning and alignment with process flow requirements", 
+    status: "Ignored" 
   },
   { 
     id: 3, 
     pidNumber: "P16093-16-01-08-1684-3", 
     issueFound: "Missing isolation valve upstream of equipment.", 
     actionRequired: "Add isolation valve as per process safety requirements.", 
-    approval: "Not Approved",
-    remark: "Safety critical", 
-    status: "Red" 
+    approval: "Ignored",
+    remark: "Safety critical - requires immediate attention from design team and process safety review", 
+    status: "Ignored" 
   },
   { 
     id: 4, 
@@ -212,8 +212,8 @@ const initialTableData = [
     issueFound: "Pipe routing crosses structural member.", 
     actionRequired: "Coordinate with structural team for clearance verification.", 
     approval: "Not",
-    remark: "Under review", 
-    status: "Grey" 
+    remark: "Under review by structural engineering team for clearance verification and potential routing modifications", 
+    status: "Pending" 
   },
   { 
     id: 5, 
@@ -221,8 +221,8 @@ const initialTableData = [
     issueFound: "Instrument connection size mismatch.", 
     actionRequired: "Update instrument specification to match field requirements.", 
     approval: "Approved",
-    remark: "Vendor consultation needed", 
-    status: "Green" 
+    remark: "", 
+    status: "Approved" 
   },
 ];
 
@@ -267,7 +267,7 @@ const DocumentDataTable = forwardRef(({
         'Issue Found': row.issueFound,
         'Action Required': row.actionRequired,
         'Approval': row.approval,
-        'Remark': row.remark,
+        ...(row.approval !== 'Approved' && { 'Remark': row.remark }), // Only include remark if not approved
         'Status': row.status
       }));
 
@@ -281,8 +281,8 @@ const DocumentDataTable = forwardRef(({
         { wch: 50 }, // Issue Found
         { wch: 50 }, // Action Required
         { wch: 15 }, // Approval
-        { wch: 30 }, // Remark
-        { wch: 10 }  // Status
+        { wch: 40 }, // Remark (increased width)
+        { wch: 15 }  // Status
       ];
       ws['!cols'] = colWidths;
 
@@ -388,9 +388,9 @@ const DocumentDataTable = forwardRef(({
             th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
             th { background-color: #f2f2f2; font-weight: bold; }
             tr:nth-child(even) { background-color: #f9f9f9; }
-            .status-green { background-color: #4caf50; color: white; padding: 4px 8px; border-radius: 12px; }
-            .status-red { background-color: #f44336; color: white; padding: 4px 8px; border-radius: 12px; }
-            .status-grey { background-color: #9e9e9e; color: white; padding: 4px 8px; border-radius: 12px; }
+            .status-approved { background-color: #4caf50; color: white; padding: 4px 8px; border-radius: 12px; }
+            .status-ignored { background-color: #f44336; color: white; padding: 4px 8px; border-radius: 12px; }
+            .status-pending { background-color: #9e9e9e; color: white; padding: 4px 8px; border-radius: 12px; }
             .issue-cell, .action-cell { max-width: 300px; word-wrap: break-word; }
             @media print {
               body { margin: 0; }
@@ -456,12 +456,18 @@ const DocumentDataTable = forwardRef(({
   const handleApprovalChange = useCallback((id, newApproval) => {
     setTableData(prev => prev.map(row => {
       if (row.id === id) {
-        // Update status based on approval
-        let newStatus = 'Grey';
-        if (newApproval === 'Approved') newStatus = 'Green';
-        else if (newApproval === 'Not Approved') newStatus = 'Red';
+        // Update status based on approval and clear remark if approved
+        let newStatus = 'Pending';
+        let newRemark = row.remark;
         
-        return { ...row, approval: newApproval, status: newStatus };
+        if (newApproval === 'Approved') {
+          newStatus = 'Approved';
+          newRemark = ''; // Clear remark for approved items
+        } else if (newApproval === 'Ignored') {
+          newStatus = 'Ignored';
+        }
+        
+        return { ...row, approval: newApproval, status: newStatus, remark: newRemark };
       }
       return row;
     }));
@@ -542,14 +548,14 @@ const DocumentDataTable = forwardRef(({
     { 
       field: 'approval', 
       headerName: 'Approval', 
-      width: 160,
+      width: 200, // Increased width for new button labels
       headerAlign: 'center',
       align: 'center',
       renderCell: (params) => (
         <div className="flex gap-1">
           <button
             onClick={() => handleApprovalChange(params.row.id, 'Approved')}
-            className={`px-2 py-1 rounded text-xs font-medium transition-colors flex items-center ${
+            className={`px-3 py-1 rounded text-xs font-medium transition-colors flex items-center ${
               params.value === 'Approved' 
                 ? 'bg-green-500 text-white' 
                 : 'bg-green-100 text-green-700 hover:bg-green-200'
@@ -557,19 +563,19 @@ const DocumentDataTable = forwardRef(({
             title="Approve"
           >
             <Check size={12} className="mr-1" />
-            App
+            Approved
           </button>
           <button
-            onClick={() => handleApprovalChange(params.row.id, 'Not Approved')}
-            className={`px-2 py-1 rounded text-xs font-medium transition-colors flex items-center ${
-              params.value === 'Not Approved' 
+            onClick={() => handleApprovalChange(params.row.id, 'Ignored')}
+            className={`px-3 py-1 rounded text-xs font-medium transition-colors flex items-center ${
+              params.value === 'Ignored' 
                 ? 'bg-red-500 text-white' 
                 : 'bg-red-100 text-red-700 hover:bg-red-200'
             }`}
-            title="Reject"
+            title="Ignore"
           >
             <X size={12} className="mr-1" />
-            Rej
+            Ignored
           </button>
         </div>
       )
@@ -577,54 +583,68 @@ const DocumentDataTable = forwardRef(({
     { 
       field: 'remark', 
       headerName: 'Remark', 
-      width: 250, // Increased width
+      width: 350, // Increased width for longer remarks
       headerAlign: 'center',
       align: 'left',
-      renderCell: (params) => (
-        <div className="w-full">
-          {editingRemark === params.row.id ? (
-            <div className="flex items-center gap-1">
-              <input
-                type="text"
-                value={remarkValue}
-                onChange={(e) => setRemarkValue(e.target.value)}
-                className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-                placeholder="Enter remark..."
-                autoFocus
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') handleRemarkSave(params.row.id);
-                  if (e.key === 'Escape') handleRemarkCancel();
-                }}
-              />
-              <button
-                onClick={() => handleRemarkSave(params.row.id)}
-                className="px-1 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
-                title="Save"
-              >
-                <Check size={12} />
-              </button>
-              <button
-                onClick={handleRemarkCancel}
-                className="px-1 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
-                title="Cancel"
-              >
-                <X size={12} />
-              </button>
+      renderCell: (params) => {
+        // Hide remark column for approved items
+        if (params.row.approval === 'Approved') {
+          return (
+            <div className="w-full text-center text-gray-400 italic text-xs">
+              No remark needed
             </div>
-          ) : (
-            <div 
-              className="flex items-center justify-between group cursor-pointer hover:bg-gray-50 p-1 rounded"
-              onClick={() => handleRemarkEdit(params.row.id, params.value)}
-              title="Click to edit remark"
-            >
-              <span className="flex-1 text-xs" style={{ wordWrap: 'break-word' }}>
-                {params.value || 'Click to add remark...'}
-              </span>
-              <Edit3 size={12} className="opacity-0 group-hover:opacity-100 transition-opacity ml-1 text-gray-400" />
-            </div>
-          )}
-        </div>
-      )
+          );
+        }
+
+        return (
+          <div className="w-full">
+            {editingRemark === params.row.id ? (
+              <div className="flex items-center gap-1">
+                <textarea
+                  value={remarkValue}
+                  onChange={(e) => setRemarkValue(e.target.value)}
+                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:border-blue-500 resize-none"
+                  placeholder="Enter remark (max 500 characters)..."
+                  autoFocus
+                  rows={3}
+                  maxLength={500} // Increased character limit
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && e.ctrlKey) handleRemarkSave(params.row.id);
+                    if (e.key === 'Escape') handleRemarkCancel();
+                  }}
+                />
+                <div className="flex flex-col gap-1">
+                  <button
+                    onClick={() => handleRemarkSave(params.row.id)}
+                    className="px-1 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+                    title="Save (Ctrl+Enter)"
+                  >
+                    <Check size={12} />
+                  </button>
+                  <button
+                    onClick={handleRemarkCancel}
+                    className="px-1 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
+                    title="Cancel (Esc)"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div 
+                className="flex items-start justify-between group cursor-pointer hover:bg-gray-50 p-1 rounded min-h-[60px]"
+                onClick={() => handleRemarkEdit(params.row.id, params.value)}
+                title="Click to edit remark"
+              >
+                <span className="flex-1 text-xs leading-relaxed" style={{ wordWrap: 'break-word' }}>
+                  {params.value || 'Click to add remark...'}
+                </span>
+                <Edit3 size={12} className="opacity-0 group-hover:opacity-100 transition-opacity ml-1 text-gray-400 flex-shrink-0" />
+              </div>
+            )}
+          </div>
+        );
+      }
     },
     { 
       field: 'status', 
@@ -641,9 +661,9 @@ const DocumentDataTable = forwardRef(({
             fontWeight: 'bold',
             color: 'white',
             backgroundColor: 
-              params.value === 'Green' ? '#4caf50' :
-              params.value === 'Red' ? '#f44336' :
-              params.value === 'Grey' ? '#9e9e9e' : '#2196f3',
+              params.value === 'Approved' ? '#4caf50' :
+              params.value === 'Ignored' ? '#f44336' :
+              params.value === 'Pending' ? '#9e9e9e' : '#2196f3',
             textTransform: 'uppercase',
             letterSpacing: '0.5px'
           }}
