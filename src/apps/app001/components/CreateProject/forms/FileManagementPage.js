@@ -122,11 +122,22 @@ const FileManagementPage = ({ projectId, onActiveTabChange }) => {
 
   // P&ID columns (with action and status columns)
   const pidColumns = [
-    { field: "serialNo", headerName: "Serial No", width: 150, headerAlign: "center", align: "center" },
+    { 
+      field: "serialNo", 
+      headerName: "Serial No", 
+      width: 120,
+      flex: 0.3,
+      minWidth: 100,
+      maxWidth: 150,
+      headerAlign: "center", 
+      align: "center" 
+    },
     {
       field: "name",
       headerName: "Drawing Title",
+      flex: 1, // This will take up most of the available space
       minWidth: 280,
+      maxWidth: 600, // Prevent excessive stretching
       renderCell: (params) => {
         const status = fileStatuses[params.row.id];
         const isSuccess = status === "success" || status === "approved" || status === "need_approve";
@@ -157,7 +168,10 @@ const FileManagementPage = ({ projectId, onActiveTabChange }) => {
     {
       field: "type",
       headerName: "Type",
-      width: 150,
+      width: 120,
+      flex: 0.3,
+      minWidth: 100,
+      maxWidth: 150,
       headerAlign: "center",
       align: "center",
       renderCell: (params) => (
@@ -169,14 +183,20 @@ const FileManagementPage = ({ projectId, onActiveTabChange }) => {
     {
       field: "size",
       headerName: "Size",
-      width: 150,
+      width: 120,
+      flex: 0.3,
+      minWidth: 100,
+      maxWidth: 150,
       headerAlign: "center",
       align: "center",
     },
     {
       field: "lastModified",
       headerName: "Last Modified",
-      width: 180,
+      width: 150,
+      flex: 0.4,
+      minWidth: 130,
+      maxWidth: 180,
       headerAlign: "center",
       align: "center",
     },
@@ -184,6 +204,9 @@ const FileManagementPage = ({ projectId, onActiveTabChange }) => {
       field: "action",
       headerName: "Action",
       width: 120,
+      flex: 0.3,
+      minWidth: 100,
+      maxWidth: 140,
       headerAlign: "center",
       align: "center",
       sortable: false,
@@ -290,6 +313,9 @@ const FileManagementPage = ({ projectId, onActiveTabChange }) => {
       field: "status",
       headerName: "Status",
       width: 120,
+      flex: 0.3,
+      minWidth: 100,
+      maxWidth: 140,
       headerAlign: "center",
       align: "center",
       renderCell: (params) => {
@@ -529,7 +555,7 @@ const FileManagementPage = ({ projectId, onActiveTabChange }) => {
 
   return (
     <div
-      className="w-full max-w-full mx-auto"
+      className="w-full max-w-full mx-auto 2xl:max-w-[1400px]" // Add Tailwind 2xl breakpoint class
       style={{
         maxWidth: isMobileSidebarOpen
           ? "100vw"
@@ -546,34 +572,31 @@ const FileManagementPage = ({ projectId, onActiveTabChange }) => {
           <p className="ml-4 text-gray-600">Loading files...</p>
         </div>
       ) : (
-        <div className="p-2 sm:p-4 h-full w-full min-w-[320px]">
+        <div className="p-1 sm:p-2 h-full w-full min-w-[320px] 2xl:max-w-[1400px] 2xl:mx-auto"> {/* Add 2xl constraints here too */}
           
-
           {/* Tab Headers */}
-          <Box sx={{ borderBottom: 'none', mb: 3 }}>
-            <div className="flex gap-2 mb-4">
+          <Box sx={{ borderBottom: 'none', mb: 1.5 }}> {/* Reduced margin from mb: 3 */}
+            <div className="flex gap-2 mb-2"> {/* Reduced margin from mb-4 */}
               <button
                 onClick={() => handleTabChange(null, 0)}
-                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
                   activeTab === 0
                     ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
                 }`}
               >
                 📄 Subject Documents
-               
               </button>
               
               <button
                 onClick={() => handleTabChange(null, 1)}
-                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
                   activeTab === 1
                     ? 'bg-green-600 text-white shadow-md hover:bg-green-700'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
                 }`}
               >
                 🤖 Reference Documents
-                
               </button>
             </div>
           </Box>
@@ -584,12 +607,26 @@ const FileManagementPage = ({ projectId, onActiveTabChange }) => {
               sx={{
                 width: "100%",
                 maxWidth: "100%",
-                height: "calc(100vh - 260px)",
+                height:
+                 {lg: "calc(100vh - 200px)",
+                  xl: "calc(100vh - 300px)",
+                  // "2xl": "calc(100vh - 100px)",
+
+                  },
+
+
                 minHeight: 300,
-                overflow: "auto",
+                overflow: "hidden",
                 boxShadow: 3,
                 borderRadius: 3,
                 border: "1px solid #e5e7eb",
+                display: "flex",
+                flexDirection: "column",
+                // Add 2xl specific styling
+                "@media (min-width: 1536px)": {
+                  maxWidth: "1400px",
+                  margin: "0 auto",
+                },
               }}
             >
               <DataGrid
@@ -599,30 +636,60 @@ const FileManagementPage = ({ projectId, onActiveTabChange }) => {
                 onRowSelectionModelChange={handleRowSelection}
                 pageSizeOptions={[10, 20, 30, 100]}
                 pagination
+                autoHeight={false}
+                disableColumnResize={false}
                 sx={{
                   width: "100%",
-                  minWidth: 320,
+                  height: "100%",
                   fontFamily: "inherit",
                   fontSize: "1rem",
+                  "& .MuiDataGrid-main": {
+                    overflow: "hidden",
+                  },
+                  "& .MuiDataGrid-virtualScroller": {
+                    overflow: "auto",
+                  },
+                  "& .MuiDataGrid-virtualScrollerContent": {
+                    width: "100% !important",
+                  },
                   "& .MuiDataGrid-columnHeaders": {
                     background: activeTab === 0 ? "#eff6ff" : "#f0fdf4",
                     fontWeight: 700,
                     fontSize: "1rem",
+                    minHeight: "52px !important",
+                  },
+                  "& .MuiDataGrid-columnHeader": {
+                    "&:focus": {
+                      outline: "none",
+                    },
+                    "&:focus-within": {
+                      outline: "none",
+                    },
                   },
                   "& .MuiDataGrid-row": {
                     background: "#fff",
+                    minHeight: "52px !important",
                     "&:hover": {
                       background: activeTab === 0 ? "#dbeafe" : "#dcfce7",
                     },
                   },
                   "& .MuiDataGrid-cell": {
                     borderBottom: "1px solid #e5e7eb",
-                    maxWidth: "100vw",
-                  },
-                  "& .MuiDataGrid-virtualScroller": {
-                    overflowX: "auto !important",
+                    padding: "8px 16px",
+                    display: "flex",
+                    alignItems: "center",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    "&:focus": {
+                      outline: "none",
+                    },
+                    "&:focus-within": {
+                      outline: "none",
+                    },
                   },
                   "& .MuiDataGrid-cellContent": {
+                    width: "100%",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
@@ -633,11 +700,69 @@ const FileManagementPage = ({ projectId, onActiveTabChange }) => {
                       backgroundColor: "rgba(25, 118, 210, 0.16)",
                     },
                   },
+                  "& .MuiDataGrid-footerContainer": {
+                    borderTop: "1px solid #e5e7eb",
+                    backgroundColor: "#f9fafb",
+                  },
+                  // Enhanced responsive breakpoints
+                  "@media (min-width: 1536px)": { // 2xl screens
+                    "& .MuiDataGrid-columnHeaders": {
+                      fontSize: "1.1rem",
+                      minHeight: "56px !important",
+                    },
+                    "& .MuiDataGrid-row": {
+                      minHeight: "56px !important",
+                    },
+                    "& .MuiDataGrid-cell": {
+                      padding: "12px 20px",
+                      fontSize: "1.05rem",
+                    },
+                  },
+                  "@media (min-width: 1280px) and (max-width: 1535px)": { // xl screens
+                    "& .MuiDataGrid-columnHeaders": {
+                      fontSize: "1.05rem",
+                      minHeight: "54px !important",
+                    },
+                    "& .MuiDataGrid-row": {
+                      minHeight: "54px !important",
+                    },
+                    "& .MuiDataGrid-cell": {
+                      padding: "10px 18px",
+                      fontSize: "1.02rem",
+                    },
+                  },
+                  "@media (max-width: 768px)": {
+                    "& .MuiDataGrid-columnHeaders": {
+                      fontSize: "0.875rem",
+                      minHeight: "48px !important",
+                    },
+                    "& .MuiDataGrid-row": {
+                      minHeight: "48px !important",
+                    },
+                    "& .MuiDataGrid-cell": {
+                      padding: "6px 12px",
+                      fontSize: "0.875rem",
+                    },
+                  },
+                  "@media (max-width: 480px)": {
+                    fontSize: "0.75rem",
+                    "& .MuiDataGrid-columnHeaders": {
+                      fontSize: "0.75rem",
+                      minHeight: "44px !important",
+                    },
+                    "& .MuiDataGrid-row": {
+                      minHeight: "44px !important",
+                    },
+                    "& .MuiDataGrid-cell": {
+                      padding: "4px 8px",
+                      fontSize: "0.75rem",
+                    },
+                  },
                 }}
               />
             </Paper>
           ) : (
-            <div className="mt-4 flex justify-center">
+            <div className="mt-2 flex justify-center 2xl:max-w-[1400px] 2xl:mx-auto"> {/* Add 2xl constraints to empty state */}
               <div
                 className="w-full max-w-sm sm:max-w-md lg:max-w-lg border-2 border-dashed border-gray-300 dark:border-gray-700 p-6 rounded-lg text-center"
                 onDrop={handleDrop}
