@@ -19,7 +19,7 @@ const FileManagementPage = ({ projectId, onActiveTabChange }) => {
   return (
     <div className="w-full max-w-full mx-auto 2xl:max-w-[1400px]">
       {/* Tab Headers */}
-      <Box sx={{ borderBottom: 'none', mb: 1.5 }}>
+      <Box sx={{ borderBottom: 'none', mb: 1.5,ml:2.5 }}>
         <div className="flex gap-2 mb-2">
           <button
             onClick={() => handleTabChange(null, 0)}

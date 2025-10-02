@@ -294,7 +294,7 @@ const CreateProjectPage = () => {
                     </span>
                   </Tooltip>
 
-                  <Tooltip title="Process" arrow>
+                  {/* <Tooltip title="Process" arrow>
                     <span>
                       <button
                         className={`${iconButtonClass} bg-yellow-500 hover:bg-yellow-600 ${selectedFiles.length === 0 ? "opacity-50 cursor-not-allowed" : ""} p-1.5 sm:p-2`}
@@ -314,7 +314,7 @@ const CreateProjectPage = () => {
                         <ViewIcon size={12} className="sm:w-3.5 sm:h-3.5" />
                       </button>
                     </span>
-                  </Tooltip>
+                  </Tooltip> */}
                 </div>
 
                 <div className="flex items-center space-x-2">
