@@ -123,7 +123,13 @@ const Navbar = ({ isScroll,hasBorder }) => {
             speed={0.5}
           />
         </div>
-      <h1 className="text-xl font-bold">DataHub</h1>
+      <div className="flex items-center justify-center gap-1">
+  <h1 className="text-xl font-bold">
+    EDRS <span className="bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent text-sm">
+      powered by AI
+    </span>
+  </h1>
+</div>
       </div>
       <div className="flex items-center gap-4">
         {/* Dark/Light Mode Toggle */}
