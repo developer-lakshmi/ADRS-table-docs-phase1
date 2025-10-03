@@ -25,25 +25,147 @@ export const exportToExcel = (tableData) => {
         'Issue Found': row.issueFound,
         'Action Required': row.actionRequired,
         'Approval': approvalValue,
-        ...(approvalValue !== 'Approved' && { 'Remark': row.remark }), // Only include remark if not approved
+        'Remark': row.remark || '',
         'Status': row.status
       };
     });
 
+    // Create worksheet
     const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'P&ID Analysis');
     
-    // Set column widths
+    // Get the range of the worksheet
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    
+    // Apply professional styling to headers
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const headerCell = XLSX.utils.encode_cell({ r: 0, c: C });
+      if (!ws[headerCell]) continue;
+      
+      // Header styling - professional blue theme
+      ws[headerCell].s = {
+        fill: { fgColor: { rgb: "1F4E79" } }, // Professional dark blue
+        font: { 
+          bold: true, 
+          color: { rgb: "FFFFFF" }, 
+          sz: 12,
+          name: "Calibri"
+        },
+        alignment: { 
+          horizontal: "center", 
+          vertical: "center",
+          wrapText: true 
+        },
+        border: {
+          top: { style: "medium", color: { rgb: "000000" } },
+          bottom: { style: "medium", color: { rgb: "000000" } },
+          left: { style: "medium", color: { rgb: "000000" } },
+          right: { style: "medium", color: { rgb: "000000" } }
+        }
+      };
+    }
+    
+    // Apply styling to data cells
+    for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ws[cellAddress]) continue;
+        
+        // Get column header to determine cell type
+        const headerCell = XLSX.utils.encode_cell({ r: 0, c: C });
+        const columnName = ws[headerCell] ? ws[headerCell].v : '';
+        
+        // Base cell styling
+        ws[cellAddress].s = {
+          font: { 
+            name: "Calibri", 
+            sz: 11 
+          },
+          alignment: { 
+            vertical: "top",
+            wrapText: true 
+          },
+          border: {
+            top: { style: "thin", color: { rgb: "D1D5DB" } },
+            bottom: { style: "thin", color: { rgb: "D1D5DB" } },
+            left: { style: "thin", color: { rgb: "D1D5DB" } },
+            right: { style: "thin", color: { rgb: "D1D5DB" } }
+          }
+        };
+        
+        // Special styling for specific columns
+        if (columnName === 'Approval') {
+          const cellValue = ws[cellAddress].v;
+          if (cellValue === 'Approved') {
+            ws[cellAddress].s.fill = { fgColor: { rgb: "D4EDDA" } }; // Light green
+            ws[cellAddress].s.font.color = { rgb: "155724" }; // Dark green
+            ws[cellAddress].s.font.bold = true;
+            ws[cellAddress].s.alignment.horizontal = "center";
+          } else if (cellValue === 'Ignored') {
+            ws[cellAddress].s.fill = { fgColor: { rgb: "F8D7DA" } }; // Light red
+            ws[cellAddress].s.font.color = { rgb: "721C24" }; // Dark red
+            ws[cellAddress].s.font.bold = true;
+            ws[cellAddress].s.alignment.horizontal = "center";
+          } else if (cellValue === 'Pending') {
+            ws[cellAddress].s.fill = { fgColor: { rgb: "FFF3CD" } }; // Light yellow
+            ws[cellAddress].s.font.color = { rgb: "856404" }; // Dark yellow
+            ws[cellAddress].s.font.bold = true;
+            ws[cellAddress].s.alignment.horizontal = "center";
+          }
+        } else if (columnName === 'Status') {
+          const cellValue = ws[cellAddress].v;
+          ws[cellAddress].s.alignment.horizontal = "center";
+          ws[cellAddress].s.font.bold = true;
+          if (cellValue === 'Approved') {
+            ws[cellAddress].s.font.color = { rgb: "155724" };
+          } else if (cellValue === 'Ignored') {
+            ws[cellAddress].s.font.color = { rgb: "721C24" };
+          } else {
+            ws[cellAddress].s.font.color = { rgb: "6C757D" };
+          }
+        } else if (columnName === 'P&ID Number') {
+          ws[cellAddress].s.font.bold = true;
+          ws[cellAddress].s.alignment.horizontal = "center";
+          ws[cellAddress].s.fill = { fgColor: { rgb: "F8F9FA" } }; // Light gray background
+        }
+        
+        // Alternate row coloring for better readability
+        if (R % 2 === 0) {
+          if (!ws[cellAddress].s.fill) {
+            ws[cellAddress].s.fill = { fgColor: { rgb: "F8F9FA" } }; // Very light gray
+          }
+        }
+      }
+    }
+    
+    // Set professional column widths
     const colWidths = [
-      { wch: 20 }, // P&ID Number
-      { wch: 50 }, // Issue Found
-      { wch: 50 }, // Action Required
+      { wch: 18 }, // P&ID Number
+      { wch: 55 }, // Issue Found
+      { wch: 55 }, // Action Required
       { wch: 15 }, // Approval
-      { wch: 40 }, // Remark (increased width)
+      { wch: 45 }, // Remark
       { wch: 15 }  // Status
     ];
     ws['!cols'] = colWidths;
+    
+    // Set row heights for better readability
+    const rowHeights = [];
+    for (let i = 0; i <= range.e.r; i++) {
+      rowHeights.push({ hpt: i === 0 ? 25 : 20 }); // Header row taller
+    }
+    ws['!rows'] = rowHeights;
+
+    // Create workbook and add title sheet
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'P&ID Analysis Results');
+    
+    // Add metadata
+    wb.Props = {
+      Title: "P&ID Analysis Results",
+      Subject: "Engineering Analysis Report",
+      Author: "P&ID Analysis System",
+      CreatedDate: new Date()
+    };
 
     const fileName = `PID_Analysis_Results_${new Date().toISOString().split('T')[0]}.xlsx`;
     XLSX.writeFile(wb, fileName);
@@ -101,177 +223,262 @@ export const exportToPDF = (tableData, title = "P&ID Analysis Results") => {
     // Create PDF in landscape mode for better table fit
     const doc = new jsPDF('landscape', 'mm', 'a4');
     
-    console.log('PDF instance created');
-    console.log('autoTable available?', typeof doc.autoTable);
+    // Professional color scheme
+    const colors = {
+      primary: [31, 78, 121],      // Professional blue
+      secondary: [248, 249, 250],   // Light gray
+      success: [34, 139, 34],       // Green
+      warning: [255, 193, 7],       // Yellow
+      danger: [220, 53, 69],        // Red
+      text: [33, 37, 41],          // Dark gray
+      lightText: [108, 117, 125]    // Medium gray
+    };
     
-    // Check if autoTable is available
-    if (typeof doc.autoTable !== 'function') {
-      console.error('autoTable is not a function. Available methods:', Object.getOwnPropertyNames(doc));
-      throw new Error('jsPDF autoTable plugin is not properly loaded');
-    }
+    // Add professional header
+    doc.setFillColor(...colors.primary);
+    doc.rect(0, 0, doc.internal.pageSize.width, 35, 'F');
     
-    // Add title and metadata
-    doc.setFontSize(18);
+    // Title
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(20);
     doc.setFont('helvetica', 'bold');
-    doc.text('P&ID Analysis Results', 15, 20);
+    doc.text('P&ID ANALYSIS RESULTS', 15, 20);
     
-    doc.setFontSize(10);
+    // Subtitle
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, 15, 30);
-    doc.text(`Total Issues: ${tableData.length}`, 15, 36);
-    doc.text(`Document: ${title}`, 15, 42);
+    doc.text('Engineering Review Document', 15, 28);
     
-    // Prepare table data exactly as shown in the UI
-    const tableColumns = [
-      'P&ID Number', 
-      'Issue Found', 
-      'Action Required', 
-      'Approval Status', 
-      'Remark', 
-      'Status'
-    ];
+    // Document info box
+    doc.setFillColor(...colors.secondary);
+    doc.rect(15, 40, doc.internal.pageSize.width - 30, 25, 'F');
+    doc.setDrawColor(...colors.primary);
+    doc.setLineWidth(0.5);
+    doc.rect(15, 40, doc.internal.pageSize.width - 30, 25);
     
-    const tableRows = tableData.map(row => {
-      // Format approval status to match UI display
-      const approvalDisplay = row.approval === 'Approved' ? '✓ APPROVED' :
-                             row.approval === 'Ignored' ? '✗ IGNORED' : 
-                             'PENDING';
-      
-      // Format remark based on approval status (same logic as UI)
-      const remarkDisplay = row.approval === 'Approved' ? 'No remark needed' : 
-                           (row.remark || 'No remark');
-      
-      // Format status to match UI
-      const statusDisplay = row.status.toUpperCase();
-      
-      return [
-        row.pidNumber || '',
-        row.issueFound || '',
-        row.actionRequired || '',
-        approvalDisplay,
-        remarkDisplay,
-        statusDisplay
-      ];
-    });
-    
-    console.log('Table data prepared, rows:', tableRows.length);
-    
-    // Use autoTable
-    doc.autoTable({
-      head: [tableColumns],
-      body: tableRows,
-      startY: 50,
-      theme: 'grid',
-      styles: { 
-        fontSize: 8, 
-        cellPadding: 3,
-        overflow: 'linebreak',
-        halign: 'left',
-        valign: 'top',
-        lineColor: [200, 200, 200],
-        lineWidth: 0.1
-      },
-      headStyles: { 
-        fillColor: [248, 249, 250],
-        textColor: [55, 65, 81],
-        fontStyle: 'bold',
-        fontSize: 9,
-        halign: 'center'
-      },
-      columnStyles: {
-        0: { cellWidth: 35, halign: 'left' },
-        1: { cellWidth: 65, halign: 'left' },
-        2: { cellWidth: 65, halign: 'left' },
-        3: { cellWidth: 30, halign: 'center' },
-        4: { cellWidth: 50, halign: 'left' },
-        5: { cellWidth: 25, halign: 'center' }
-      },
-      alternateRowStyles: {
-        fillColor: [250, 250, 250]
-      },
-      margin: { top: 50, right: 15, bottom: 20, left: 15 },
-      didParseCell: function(data) {
-        // Color code the approval column
-        if (data.column.index === 3) {
-          if (data.cell.text[0] === '✓ APPROVED') {
-            data.cell.styles.fillColor = [74, 222, 128];
-            data.cell.styles.textColor = [255, 255, 255];
-            data.cell.styles.fontStyle = 'bold';
-          } else if (data.cell.text[0] === '✗ IGNORED') {
-            data.cell.styles.fillColor = [248, 113, 113];
-            data.cell.styles.textColor = [255, 255, 255];
-            data.cell.styles.fontStyle = 'bold';
-          } else {
-            data.cell.styles.fillColor = [156, 163, 175];
-            data.cell.styles.textColor = [255, 255, 255];
-            data.cell.styles.fontStyle = 'bold';
-          }
-        }
-        
-        // Color code the status column
-        if (data.column.index === 5) {
-          if (data.cell.text[0] === 'APPROVED') {
-            data.cell.styles.fillColor = [76, 175, 80];
-            data.cell.styles.textColor = [255, 255, 255];
-            data.cell.styles.fontStyle = 'bold';
-          } else if (data.cell.text[0] === 'IGNORED') {
-            data.cell.styles.fillColor = [244, 67, 54];
-            data.cell.styles.textColor = [255, 255, 255];
-            data.cell.styles.fontStyle = 'bold';
-          } else if (data.cell.text[0] === 'PENDING') {
-            data.cell.styles.fillColor = [158, 158, 158];
-            data.cell.styles.textColor = [255, 255, 255];
-            data.cell.styles.fontStyle = 'bold';
-          }
-        }
-        
-        // Style remark column
-        if (data.column.index === 4) {
-          if (data.cell.text[0] === 'No remark needed') {
-            data.cell.styles.textColor = [156, 163, 175];
-            data.cell.styles.fontStyle = 'italic';
-          }
-        }
-      },
-      didDrawPage: function (data) {
-        // Add page number
-        const pageCount = doc.internal.getNumberOfPages();
-        doc.setFontSize(8);
-        doc.setTextColor(107, 114, 128);
-        doc.text(`Page ${data.pageNumber} of ${pageCount}`, doc.internal.pageSize.width - 30, doc.internal.pageSize.height - 10);
-        
-        // Add footer
-        doc.text('Generated from P&ID Analysis System', 15, doc.internal.pageSize.height - 10);
-      }
-    });
-    
-    // Add summary statistics at the bottom
-    const finalY = doc.lastAutoTable.finalY + 15;
-    const approvedCount = tableData.filter(row => row.approval === 'Approved').length;
-    const ignoredCount = tableData.filter(row => row.approval === 'Ignored').length;
-    const pendingCount = tableData.filter(row => row.approval === 'Not' || !row.approval || row.approval === 'Pending').length;
-    
+    doc.setTextColor(...colors.text);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(55, 65, 81);
-    doc.text('Summary:', 15, finalY);
+    doc.text('Document Information:', 20, 48);
     
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    doc.text(`✓ Approved: ${approvedCount}`, 15, finalY + 8);
-    doc.text(`✗ Ignored: ${ignoredCount}`, 70, finalY + 8);
-    doc.text(`⏳ Pending: ${pendingCount}`, 120, finalY + 8);
+    doc.text(`Generated: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, 20, 54);
+    doc.text(`Total Issues: ${tableData.length}`, 20, 58);
+    doc.text(`Report: ${title}`, 20, 62);
     
-    // Generate filename with timestamp
+    // Statistics
+    const approvedCount = tableData.filter(row => row.approval === 'Approved').length;
+    const ignoredCount = tableData.filter(row => row.approval === 'Ignored').length;
+    const pendingCount = tableData.filter(row => row.approval === 'Pending' || row.approval === 'Not' || !row.approval).length;
+    
+    doc.text(`Approved: ${approvedCount}`, 180, 54);
+    doc.text(`Ignored: ${ignoredCount}`, 180, 58);
+    doc.text(`Pending: ${pendingCount}`, 180, 62);
+    
+    // Prepare professional table data
+    const tableColumns = [
+      { header: 'P&ID Number', dataKey: 'pidNumber' },
+      { header: 'Issue Found', dataKey: 'issueFound' },
+      { header: 'Action Required', dataKey: 'actionRequired' },
+      { header: 'Approval Status', dataKey: 'approval' },
+      { header: 'Remark', dataKey: 'remark' },
+      { header: 'Status', dataKey: 'status' }
+    ];
+    
+    const tableRows = tableData.map(row => {
+      // Transform approval value to show "Pending" instead of "Not"
+      const approvalValue = (row.approval === 'Not' || row.approval === 'NO' || row.approval === 'No' || !row.approval || row.approval === '') ? 'Pending' : row.approval;
+      
+      return {
+        pidNumber: row.pidNumber || '',
+        issueFound: row.issueFound || '',
+        actionRequired: row.actionRequired || '',
+        approval: approvalValue,
+        remark: row.remark || '',
+        status: row.status || ''
+      };
+    });
+    
+    // Use autoTable with professional styling
+    doc.autoTable({
+      columns: tableColumns,
+      body: tableRows,
+      startY: 75,
+      theme: 'grid',
+      styles: { 
+        fontSize: 8, 
+        cellPadding: 4,
+        overflow: 'linebreak',
+        halign: 'left',
+        valign: 'top',
+        lineColor: colors.primary,
+        lineWidth: 0.1,
+        font: 'helvetica'
+      },
+      headStyles: { 
+        fillColor: colors.primary,
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 10, // Increased font size for headers
+        halign: 'center',
+        cellPadding: 8, // Increased padding
+        minCellHeight: 15 // Increased minimum height
+      },
+      columnStyles: {
+        0: { cellWidth: 40, halign: 'center', fontStyle: 'bold' }, // P&ID Number - increased width further
+        1: { cellWidth: 55, halign: 'left' },                      // Issue Found
+        2: { cellWidth: 55, halign: 'left' },                      // Action Required
+        3: { cellWidth: 30, halign: 'center', fontStyle: 'bold' }, // Approval
+        4: { cellWidth: 40, halign: 'left' },                      // Remark
+        5: { cellWidth: 25, halign: 'center', fontStyle: 'bold' }  // Status
+      },
+      alternateRowStyles: {
+        fillColor: [248, 249, 250]
+      },
+      margin: { top: 75, right: 8, bottom: 30, left: 8 }, // Further reduced margins
+      tableWidth: 'auto',
+      didParseCell: function(data) {
+        // Ensure header text is properly displayed with better formatting
+        if (data.section === 'head') {
+          data.cell.styles.overflow = 'linebreak';
+          data.cell.styles.cellPadding = { top: 8, right: 4, bottom: 8, left: 4 };
+          data.cell.styles.fontSize = 10;
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.halign = 'center';
+          data.cell.styles.valign = 'middle';
+          data.cell.styles.fillColor = colors.primary; // Ensure primary background
+          data.cell.styles.textColor = [255, 255, 255]; // Ensure white text
+          
+          // Special handling for P&ID Number column header
+          if (data.column.dataKey === 'pidNumber') {
+            data.cell.styles.fontSize = 10; // Keep same size as other headers
+            data.cell.styles.fillColor = colors.primary; // Ensure primary blue background
+            data.cell.styles.textColor = [255, 255, 255]; // Ensure white text
+            data.cell.text = ['P&ID Number']; // Ensure text is properly set
+          }
+        }
+        
+        // Professional color coding for approval column
+        if (data.column.dataKey === 'approval') {
+          if (data.cell.text[0] === 'Approved') {
+            data.cell.styles.fillColor = [212, 237, 218]; // Professional green
+            data.cell.styles.textColor = [21, 87, 36];
+            data.cell.styles.fontStyle = 'bold';
+          } else if (data.cell.text[0] === 'Ignored') {
+            data.cell.styles.fillColor = [248, 215, 218]; // Professional red
+            data.cell.styles.textColor = [114, 28, 36];
+            data.cell.styles.fontStyle = 'bold';
+          } else if (data.cell.text[0] === 'Pending') {
+            data.cell.styles.fillColor = [255, 243, 205]; // Professional yellow
+            data.cell.styles.textColor = [133, 100, 4];
+            data.cell.styles.fontStyle = 'bold';
+          }
+        }
+        
+        // Professional color coding for status column
+        if (data.column.dataKey === 'status') {
+          if (data.cell.text[0] === 'Approved') {
+            data.cell.styles.textColor = [21, 87, 36];
+            data.cell.styles.fontStyle = 'bold';
+          } else if (data.cell.text[0] === 'Ignored') {
+            data.cell.styles.textColor = [114, 28, 36];
+            data.cell.styles.fontStyle = 'bold';
+          } else if (data.cell.text[0] === 'Pending') {
+            data.cell.styles.textColor = [133, 100, 4];
+            data.cell.styles.fontStyle = 'bold';
+          }
+        }
+        
+        // Style P&ID Number column DATA cells (not header)
+        if (data.column.dataKey === 'pidNumber' && data.section !== 'head') {
+          data.cell.styles.fillColor = [248, 249, 250];
+          data.cell.styles.fontStyle = 'bold';
+        }
+      },
+      didDrawPage: function (data) {
+        // Professional footer
+        const pageHeight = doc.internal.pageSize.height;
+        const pageWidth = doc.internal.pageSize.width;
+        
+        // Footer line
+        doc.setDrawColor(...colors.primary);
+        doc.setLineWidth(0.5);
+        doc.line(15, pageHeight - 25, pageWidth - 15, pageHeight - 25);
+        
+        // Page number
+        doc.setFontSize(9);
+        doc.setTextColor(...colors.text);
+        doc.setFont('helvetica', 'normal');
+        const pageCount = doc.internal.getNumberOfPages();
+        doc.text(`Page ${data.pageNumber} of ${pageCount}`, pageWidth - 40, pageHeight - 15);
+        
+        // Footer text
+        doc.setFontSize(8);
+        doc.setTextColor(...colors.lightText);
+        doc.text('Generated from P&ID Analysis System | Confidential Engineering Document', 15, pageHeight - 15);
+        
+        // Document classification
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.primary);
+        doc.text('ENGINEERING REVIEW DOCUMENT', 15, pageHeight - 8);
+      }
+    });
+    
+    // Add professional summary box
+    const finalY = doc.lastAutoTable.finalY + 15;
+    
+    if (finalY < doc.internal.pageSize.height - 60) {
+      // Summary box
+      doc.setFillColor(...colors.secondary);
+      doc.rect(15, finalY, doc.internal.pageSize.width - 30, 35, 'F');
+      doc.setDrawColor(...colors.primary);
+      doc.setLineWidth(0.5);
+      doc.rect(15, finalY, doc.internal.pageSize.width - 30, 35);
+      
+      // Summary title
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...colors.primary);
+      doc.text('ANALYSIS SUMMARY', 20, finalY + 10);
+      
+      // Summary statistics with professional formatting
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(...colors.text);
+      
+      // Create summary columns
+      const col1X = 20;
+      const col2X = 120;
+      const col3X = 220;
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(21, 87, 36);
+      doc.text('✓ APPROVED', col1X, finalY + 20);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${approvedCount} items`, col1X, finalY + 26);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(114, 28, 36);
+      doc.text('✗ IGNORED', col2X, finalY + 20);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${ignoredCount} items`, col2X, finalY + 26);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(133, 100, 4);
+      doc.text('⏳ PENDING', col3X, finalY + 20);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${pendingCount} items`, col3X, finalY + 26);
+    }
+    
+    // Generate professional filename
     const timestamp = new Date().toISOString().split('T')[0];
     const fileName = `PID_Analysis_Results_${timestamp}.pdf`;
     
     console.log('Saving PDF...');
-    
-    // Save the PDF
     doc.save(fileName);
-    
     console.log('PDF export completed successfully');
+    
   } catch (error) {
     console.error('Export to PDF failed:', error);
     alert(`Failed to export to PDF: ${error.message}. Please check console for details.`);
