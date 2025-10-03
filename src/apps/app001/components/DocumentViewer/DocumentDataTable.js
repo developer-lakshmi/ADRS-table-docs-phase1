@@ -1,5 +1,4 @@
 import React, { useState, useCallback, useMemo, forwardRef, useImperativeHandle, useEffect } from 'react';
-import { DataGrid } from "@mui/x-data-grid";
 import { Check, X, Edit3, AlertTriangle, CheckCircle, Clock, BarChart3, Maximize2, Minimize2 } from "lucide-react";
 import { handleExport, handlePrint } from './exportUtils';
 import { getAnalysisData } from './dataService';
@@ -27,25 +26,31 @@ const DocumentDataTable = forwardRef(({
   // Use internal fullscreen state if no external control provided
   const isTableFullscreen = onFullscreenToggle ? isFullscreen : internalFullscreen;
 
-  // Load data when component mounts - Fixed to prevent infinite loop
+  // Load data when component mounts
   useEffect(() => {
-    let isMounted = true; // Flag to prevent state updates if component unmounts
+    let isMounted = true;
 
     const loadData = async () => {
       try {
-        if (!isMounted) return; // Prevent state update if unmounted
+        if (!isMounted) return;
         
         setLoading(true);
         setError(null);
         
         const analysisData = await getAnalysisData(null, null, data);
         
-        if (!isMounted) return; // Prevent state update if unmounted
+        if (!isMounted) return;
         
-        setTableData(analysisData);
-        console.log(`Loaded ${analysisData.length} analysis records`);
+        // Transform "Not" to "Pending" in the data
+        const transformedData = analysisData.map(row => ({
+          ...row,
+          approval: row.approval === 'Not' ? 'Pending' : row.approval
+        }));
+        
+        setTableData(transformedData);
+        console.log(`Loaded ${transformedData.length} analysis records`);
       } catch (err) {
-        if (!isMounted) return; // Prevent state update if unmounted
+        if (!isMounted) return;
         
         console.error('Failed to load analysis data:', err);
         setError(err.message);
@@ -59,13 +64,12 @@ const DocumentDataTable = forwardRef(({
 
     loadData();
 
-    // Cleanup function to prevent state updates after unmount
     return () => {
       isMounted = false;
     };
-  }, []); // Remove 'data' dependency to prevent infinite loop
+  }, []);
 
-  // Handle fullscreen toggle - Fixed to prevent infinite updates
+  // Handle fullscreen toggle
   const handleFullscreenToggle = useCallback(() => {
     if (onFullscreenToggle) {
       onFullscreenToggle();
@@ -74,7 +78,7 @@ const DocumentDataTable = forwardRef(({
     }
   }, [onFullscreenToggle]);
 
-  // Handle ESC key to exit fullscreen - Fixed dependencies
+  // Handle ESC key to exit fullscreen
   useEffect(() => {
     const handleEscKey = (event) => {
       if (event.key === 'Escape' && isTableFullscreen) {
@@ -98,11 +102,15 @@ const DocumentDataTable = forwardRef(({
     },
     refreshData: async () => {
       const analysisData = await getAnalysisData(null, null, []);
-      setTableData(analysisData);
-      return analysisData;
+      const transformedData = analysisData.map(row => ({
+        ...row,
+        approval: row.approval === 'Not' ? 'Pending' : row.approval
+      }));
+      setTableData(transformedData);
+      return transformedData;
     },
     getTableData: () => tableData
-  }), [tableData, title]); // Added dependencies
+  }), [tableData, title]);
 
   // Handle approval status change
   const handleApprovalChange = useCallback((id, newApproval) => {
@@ -143,190 +151,15 @@ const DocumentDataTable = forwardRef(({
     setRemarkValue('');
   }, []);
 
-  // Calculate statistics - Memoized to prevent recalculation
+  // Calculate statistics
   const stats = useMemo(() => {
     const approved = tableData.filter(row => row.approval === 'Approved').length;
     const ignored = tableData.filter(row => row.approval === 'Ignored').length;
-    const pending = tableData.filter(row => row.approval === 'Not' || !row.approval || row.approval === 'Pending').length;
+    const pending = tableData.filter(row => row.approval === 'Pending' || row.approval === 'Not' || !row.approval).length;
     const total = tableData.length;
     
     return { approved, ignored, pending, total };
   }, [tableData]);
-
-  // Table columns definition - Memoized to prevent recreation
-  const tableColumns = useMemo(() => [
-    { 
-      field: 'pidNumber', 
-      headerName: 'P&ID Number', 
-      width: 160,
-      headerAlign: 'center',
-      align: 'center',
-      renderCell: (params) => (
-        <div className="font-mono text-xs">{params.value}</div>
-      )
-    },
-    { 
-      field: 'issueFound', 
-      headerName: 'Issue Found', 
-      width: 400,
-      headerAlign: 'center',
-      align: 'left',
-      renderCell: (params) => (
-        <div className="text-sm py-2 leading-relaxed">{params.value}</div>
-      )
-    },
-    { 
-      field: 'actionRequired', 
-      headerName: 'Action Required', 
-      width: 400,
-      headerAlign: 'center',
-      align: 'left',
-      renderCell: (params) => (
-        <div className="text-sm py-2 leading-relaxed">{params.value}</div>
-      )
-    },
-    { 
-      field: 'approval', 
-      headerName: 'Approval', 
-      width: 180,
-      headerAlign: 'center',
-      align: 'center',
-      renderCell: (params) => (
-        <div className="flex gap-1">
-          <button
-            onClick={() => handleApprovalChange(params.row.id, 'Approved')}
-            className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-              params.value === 'Approved' 
-                ? 'bg-green-500 text-white' 
-                : 'bg-green-100 text-green-800 hover:bg-green-200'
-            }`}
-          >
-            <Check size={12} className="inline mr-1" />
-            Approve
-          </button>
-          <button
-            onClick={() => handleApprovalChange(params.row.id, 'Ignored')}
-            className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-              params.value === 'Ignored' 
-                ? 'bg-red-500 text-white' 
-                : 'bg-red-100 text-red-800 hover:bg-red-200'
-            }`}
-          >
-            <X size={12} className="inline mr-1" />
-            Ignore
-          </button>
-        </div>
-      )
-    },
-    { 
-      field: 'remark', 
-      headerName: 'Remark', 
-      width: 300,
-      headerAlign: 'center',
-      align: 'left',
-      renderCell: (params) => {
-        if (params.row.approval === 'Approved') {
-          return (
-            <div className="text-center py-4">
-              <span className="text-green-600 text-xs">✓ Approved</span>
-            </div>
-          );
-        }
-
-        return (
-          <div className="w-full py-1">
-            {editingRemark === params.row.id ? (
-              <div className="space-y-2">
-                <textarea
-                  value={remarkValue}
-                  onChange={(e) => setRemarkValue(e.target.value)}
-                  className="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:border-blue-500 resize-none"
-                  placeholder="Enter remark (max 500 characters)..."
-                  autoFocus
-                  rows={3}
-                  maxLength={500}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && e.ctrlKey) handleRemarkSave(params.row.id);
-                    if (e.key === 'Escape') handleRemarkCancel();
-                  }}
-                />
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-500">{remarkValue.length}/500</span>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => handleRemarkSave(params.row.id)}
-                      className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={handleRemarkCancel}
-                      className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div 
-                className="w-full cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors min-h-[40px] flex items-center"
-                onClick={() => handleRemarkEdit(params.row.id, params.value)}
-              >
-                {params.value ? (
-                  <div className="text-sm">{params.value}</div>
-                ) : (
-                  <div className="text-sm text-gray-400 italic flex items-center">
-                    <Edit3 size={12} className="mr-1" />
-                    Click to add remark...
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        );
-      }
-    },
-    { 
-      field: 'status', 
-      headerName: 'Status', 
-      width: 120,
-      headerAlign: 'center',
-      align: 'center',
-      renderCell: (params) => {
-        const getStatusStyle = (status) => {
-          switch (status) {
-            case 'Approved':
-              return 'bg-green-100 text-green-800';
-            case 'Ignored':
-              return 'bg-red-100 text-red-800';
-            case 'Pending':
-            default:
-              return 'bg-yellow-100 text-yellow-800';
-          }
-        };
-
-        const getStatusIcon = (status) => {
-          switch (status) {
-            case 'Approved':
-              return <CheckCircle size={12} className="mr-1" />;
-            case 'Ignored':
-              return <X size={12} className="mr-1" />;
-            case 'Pending':
-            default:
-              return <Clock size={12} className="mr-1" />;
-          }
-        };
-
-        return (
-          <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusStyle(params.value)}`}>
-            {getStatusIcon(params.value)}
-            {params.value}
-          </div>
-        );
-      }
-    },
-  ], [editingRemark, remarkValue, handleApprovalChange, handleRemarkEdit, handleRemarkSave, handleRemarkCancel]);
 
   // Render fullscreen mode
   if (isTableFullscreen) {
@@ -334,7 +167,7 @@ const DocumentDataTable = forwardRef(({
       <div className="fixed inset-0 z-50 bg-white dark:bg-gray-900">
         <div className="h-full flex flex-col">
           {/* Fullscreen Header */}
-          <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <BarChart3 size={24} className="mr-3 text-indigo-600" />
@@ -378,46 +211,22 @@ const DocumentDataTable = forwardRef(({
             </div>
           </div>
           
-          {/* Fullscreen Table Content */}
+          {/* Fullscreen Table Content with proper container */}
           <div className="flex-1 overflow-hidden p-6">
-            <div className="h-full bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-              <DataGrid
-                rows={tableData}
-                columns={tableColumns}
-                initialState={{
-                  pagination: {
-                    paginationModel: { page: 0, pageSize: 25 },
-                  },
-                }}
-                pageSizeOptions={[10, 25, 50, 100]}
-                disableSelectionOnClick
-                className="border-0"
-                getRowHeight={() => 'auto'}
-                sx={{
-                  '& .MuiDataGrid-root': {
-                    border: 'none',
-                    fontSize: '14px',
-                  },
-                  '& .MuiDataGrid-cell': {
-                    borderBottom: '1px solid #f1f5f9',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    padding: '12px',
-                  },
-                  '& .MuiDataGrid-columnHeaders': {
-                    backgroundColor: '#f8fafc',
-                    borderBottom: '2px solid #e2e8f0',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                  },
-                  '& .MuiDataGrid-row': {
-                    minHeight: '60px !important',
-                    '&:hover': {
-                      backgroundColor: '#f8fafc',
-                    },
-                  },
-                }}
-              />
+            <div className="h-full bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="h-full overflow-auto">
+                <SimpleTable 
+                  tableData={tableData}
+                  editingRemark={editingRemark}
+                  remarkValue={remarkValue}
+                  setRemarkValue={setRemarkValue}
+                  handleApprovalChange={handleApprovalChange}
+                  handleRemarkEdit={handleRemarkEdit}
+                  handleRemarkSave={handleRemarkSave}
+                  handleRemarkCancel={handleRemarkCancel}
+                  isFullscreen={true}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -502,52 +311,195 @@ const DocumentDataTable = forwardRef(({
       </div>
 
       {/* Table Content */}
-      <div className="flex-1 overflow-hidden">
-        <DataGrid
-          rows={tableData}
-          columns={tableColumns}
-          initialState={{
-            pagination: {
-              paginationModel: { page: 0, pageSize: 10 },
-            },
-          }}
-          pageSizeOptions={[5, 10, 25, 50]}
-          disableSelectionOnClick
-          className="border-0"
-          getRowHeight={() => 'auto'}
-          sx={{
-            '& .MuiDataGrid-root': {
-              border: 'none',
-              fontSize: '14px',
-            },
-            '& .MuiDataGrid-cell': {
-              borderBottom: '1px solid #f1f5f9',
-              display: 'flex',
-              alignItems: 'flex-start',
-              padding: '12px',
-            },
-            '& .MuiDataGrid-columnHeaders': {
-              backgroundColor: '#f8fafc',
-              borderBottom: '2px solid #e2e8f0',
-              fontSize: '13px',
-              fontWeight: 600,
-            },
-            '& .MuiDataGrid-row': {
-              minHeight: '60px !important',
-              '&:hover': {
-                backgroundColor: '#f8fafc',
-              },
-            },
-            '& .MuiDataGrid-footerContainer': {
-              borderTop: '1px solid #e2e8f0',
-              backgroundColor: '#f8fafc',
-            },
-          }}
+      <div className="flex-1 overflow-auto">
+        <SimpleTable 
+          tableData={tableData}
+          editingRemark={editingRemark}
+          remarkValue={remarkValue}
+          setRemarkValue={setRemarkValue}
+          handleApprovalChange={handleApprovalChange}
+          handleRemarkEdit={handleRemarkEdit}
+          handleRemarkSave={handleRemarkSave}
+          handleRemarkCancel={handleRemarkCancel}
+          isFullscreen={false}
         />
       </div>
     </div>
   );
 });
+
+// Simple HTML Table Component - NO EVENT INTERFERENCE
+const SimpleTable = ({ 
+  tableData, 
+  editingRemark, 
+  remarkValue, 
+  setRemarkValue,
+  handleApprovalChange,
+  handleRemarkEdit,
+  handleRemarkSave,
+  handleRemarkCancel,
+  isFullscreen
+}) => {
+  return (
+    <div className={`${isFullscreen ? 'h-full' : ''} overflow-auto`}>
+      <table className="w-full">
+        <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0 z-10">
+          <tr>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-b">
+              P&ID Number
+            </th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-b">
+              Issue Found
+            </th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-b">
+              Action Required
+            </th>
+            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-b">
+              Approval
+            </th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-b">
+              Remark
+            </th>
+            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-b">
+              Status
+            </th>
+          </tr>
+        </thead>
+        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+          {tableData.map((row, index) => (
+            <tr key={row.id} className={index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-750'}>
+              {/* P&ID Number */}
+              <td className="px-4 py-4 whitespace-nowrap">
+                <div className="text-sm font-mono font-bold text-gray-900 dark:text-gray-100">
+                  {row.pidNumber}
+                </div>
+              </td>
+
+              {/* Issue Found */}
+              <td className="px-4 py-4">
+                <div className={`text-sm text-gray-900 dark:text-gray-100 leading-relaxed ${isFullscreen ? 'max-w-lg' : 'max-w-md'}`}>
+                  {row.issueFound}
+                </div>
+              </td>
+
+              {/* Action Required */}
+              <td className="px-4 py-4">
+                <div className={`text-sm text-gray-900 dark:text-gray-100 leading-relaxed ${isFullscreen ? 'max-w-lg' : 'max-w-md'}`}>
+                  {row.actionRequired}
+                </div>
+              </td>
+
+              {/* Approval Buttons */}
+              <td className="px-4 py-4 text-center">
+                <div className="flex gap-1 justify-center">
+                  <button
+                    onClick={() => handleApprovalChange(row.id, 'Approved')}
+                    className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                      row.approval === 'Approved' 
+                        ? 'bg-green-500 text-white' 
+                        : 'bg-green-100 text-green-800 hover:bg-green-200'
+                    }`}
+                  >
+                    <Check size={12} className="inline mr-1" />
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => handleApprovalChange(row.id, 'Ignored')}
+                    className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                      row.approval === 'Ignored' 
+                        ? 'bg-red-500 text-white' 
+                        : 'bg-red-100 text-red-800 hover:bg-red-200'
+                    }`}
+                  >
+                    <X size={12} className="inline mr-1" />
+                    Ignore
+                  </button>
+                </div>
+              </td>
+
+              {/* Remark */}
+              <td className="px-4 py-4">
+                {row.approval === 'Approved' ? (
+                  <div className="text-center py-4">
+                    <span className="text-green-600 text-xs">✓ Approved</span>
+                  </div>
+                ) : editingRemark === row.id ? (
+                  <div className={`space-y-2 ${isFullscreen ? 'max-w-md' : 'max-w-sm'}`}>
+                    {/* SIMPLE TEXTAREA - NO EVENT INTERFERENCE */}
+                    <textarea
+                      value={remarkValue}
+                      onChange={(e) => setRemarkValue(e.target.value)}
+                      className="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:border-blue-500 resize-none"
+                      placeholder="Enter remark (max 500 characters)..."
+                      autoFocus
+                      rows={3}
+                      maxLength={500}
+                      onKeyDown={(e) => {
+                        // Only handle specific shortcuts - let everything else work normally
+                        if (e.key === 'Enter' && e.ctrlKey) {
+                          e.preventDefault();
+                          handleRemarkSave(row.id);
+                        } else if (e.key === 'Escape') {
+                          e.preventDefault();
+                          handleRemarkCancel();
+                        }
+                      }}
+                    />
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-500">{remarkValue.length}/500</span>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => handleRemarkSave(row.id)}
+                          className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={handleRemarkCancel}
+                          className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div 
+                    className={`w-full cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors min-h-[40px] flex items-center ${isFullscreen ? 'max-w-md' : 'max-w-sm'}`}
+                    onClick={() => handleRemarkEdit(row.id, row.remark)}
+                  >
+                    {row.remark ? (
+                      <div className="text-sm">{row.remark}</div>
+                    ) : (
+                      <div className="text-sm text-gray-400 italic flex items-center">
+                        <Edit3 size={12} className="mr-1" />
+                        Click to add remark...
+                      </div>
+                    )}
+                  </div>
+                )}
+              </td>
+
+              {/* Status */}
+              <td className="px-4 py-4 text-center">
+                <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                  row.status === 'Approved' ? 'bg-green-100 text-green-800' :
+                  row.status === 'Ignored' ? 'bg-red-100 text-red-800' :
+                  'bg-yellow-100 text-yellow-800'
+                }`}>
+                  {row.status === 'Approved' ? <CheckCircle size={12} className="mr-1" /> :
+                   row.status === 'Ignored' ? <X size={12} className="mr-1" /> :
+                   <Clock size={12} className="mr-1" />}
+                  {row.status}
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
 
 DocumentDataTable.displayName = 'DocumentDataTable';
 
