@@ -16,14 +16,19 @@ require('jspdf-autotable');
  */
 export const exportToExcel = (tableData) => {
   try {
-    const exportData = tableData.map(row => ({
-      'P&ID Number': row.pidNumber,
-      'Issue Found': row.issueFound,
-      'Action Required': row.actionRequired,
-      'Approval': row.approval,
-      ...(row.approval !== 'Approved' && { 'Remark': row.remark }), // Only include remark if not approved
-      'Status': row.status
-    }));
+    const exportData = tableData.map(row => {
+      // Transform approval value to show "Pending" instead of "Not"
+      const approvalValue = (row.approval === 'Not' || row.approval === 'NO' || row.approval === 'No' || !row.approval || row.approval === '') ? 'Pending' : row.approval;
+      
+      return {
+        'P&ID Number': row.pidNumber,
+        'Issue Found': row.issueFound,
+        'Action Required': row.actionRequired,
+        'Approval': approvalValue,
+        ...(approvalValue !== 'Approved' && { 'Remark': row.remark }), // Only include remark if not approved
+        'Status': row.status
+      };
+    });
 
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
