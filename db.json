@@ -2,34 +2,11 @@
   "uploadedFiles": [],
   "projects": [
     {
-      "id": "wsctl6k1y",
-      "projectName": "Test Projects",
-      "projectId": "D1235f",
+      "id": "rt8lovekq",
+      "projectName": "Test Project",
+      "projectId": "A15632f",
       "projectType": "Process",
-      "projectDescription": "Project Description of test projects",
-      "userId": "12234",
-      "decipline": "Process",
-      "docType": "PDF",
-      "clientName": "",
-      "projectCode": "1345",
-      "mLModel": "",
-      "projectPurpose": "",
-      "description": "",
-      "cadSystem": "",
-      "tolerance": "-1",
-      "maxArialGap": "",
-      "arrowSize": "",
-      "inputSpaceHeight": "",
-      "inputSpaceWidth": "",
-      "cadOutput": "",
-      "diameterSymbol": "",
-      "arrowBuffer": "",
-      "outputDrawingBorder": "",
-      "inputSpaceUnit": "",
-      "endpointDistance": "",
-      "gridSize": "",
-      "securityLevel": "",
-      "encryptionKey": ""
+      "projectDescription": "This is the description of project"
     }
   ],
   "signup": [
