@@ -29,7 +29,7 @@ const FileManagementPage = ({ projectId, onActiveTabChange }) => {
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
             }`}
           >
-            📄 Subject Documents
+            📄 P & ID Documents
           </button>
           
           <button
